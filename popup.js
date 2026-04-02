@@ -601,8 +601,10 @@
   ---------------------------------------------------------- */
 
   var DEFAULT_PRESETS = [
-    { name: "Only girls", tag: "+{girl|female|woman|}" },
-    { name: "Only Christian", tag: "+{christian|catholic|protestant}" },
+    { name: "Only Females", tag: "+{female|woman|girl|lady|she|her|she/her|her/she|herself|queen}" },
+    { name: "Only Males", tag: "+{male|man|boy|gentleman|guy|he|him|he/him|him/he|himself}" },
+    { name: "Only Christian", tag: "+{Christian|Christ|Faith|Jesus|Jesus Follower|Follower of Christ|Man of God|Woman of God|God|Bible|Church|Believer}" },
+    { name: "Only Hindhu", tag: "+{Hindu|Vishnu|Shiva|Krishna|Rama|Ganesh|Hanuman|Lakshmi|Saraswati|Durga|Kali|Parvati|Indra|Sanatan|Sanatani|Dharma|Dharma Follower|Spiritual|Karma|Reincarnation|Atman|Moksha|Brahma|}" },
   ];
 
   function openPresetsPopup(filterTagsInput) {
@@ -960,11 +962,11 @@
     .preset-item:hover { background: rgba(255,255,255,0.05); }
     .preset-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .preset-name { color: var(--white1); font-size: 13px; font-weight: 600; }
-    .preset-tag { color: var(--white3); font-size: 11px; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .preset-tag { color: var(--white3); font-size: 11px; font-family: monospace; overflow-wrap: break-word; }
     .preset-delete-btn { background: none; border: none; color: var(--white3); font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 4px; transition: color 0.2s, background 0.15s; flex-shrink: 0; }
     .preset-delete-btn:hover { color: #ff6b6b; background: rgba(255,80,80,0.1); }
     .presets-empty { padding: 30px 16px; text-align: center; color: var(--white3); font-size: 13px; }
-    .view-presets-link { color: var(--primary); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 3px; transition: opacity 0.2s; user-select: none; flex-shrink: 0; }
+    .view-presets-link { color: var(--primary); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 7.5px; transition: opacity 0.2s; user-select: none; flex-shrink: 0; }
     .view-presets-link:hover { opacity: 0.8; }
 
     /* ══════════════════════════════════════════════════════
@@ -1234,8 +1236,8 @@
             translateBtn.classList.remove("translated");
             translateBtn.classList.remove("translating");
             translateBtn.title = "Translate to English";
-            translateBtn.innerHTML =
-              '<i class="fa-solid fa-language"></i>';
+            var resetIcon = translateBtn.querySelector("i");
+            if (resetIcon) resetIcon.className = "fa-solid fa-language";
             applyBioToggle(bioEl);
             return;
           }
@@ -1245,15 +1247,15 @@
             translateBtn.classList.remove("translating");
             translateBtn.classList.add("translated");
             translateBtn.title = "Show original";
-            translateBtn.innerHTML =
-              '<i class="fa-solid fa-language"></i>';
+            var cacheIcon = translateBtn.querySelector("i");
+            if (cacheIcon) cacheIcon.className = "fa-solid fa-language";
             applyBioToggle(bioEl);
             return;
           }
+          var spinIcon = translateBtn.querySelector("i");
           translateBtn.classList.add("translating");
           translateBtn.title = "Translating\u2026";
-          translateBtn.innerHTML =
-            '<i class="fa-solid fa-spinner fa-spin"></i>';
+          if (spinIcon) spinIcon.className = "fa-solid fa-spinner fa-spin";
           translateToEnglish(bioEl._originalBio)
             .then(function (translated) {
               _translationCache.translated = translated;
@@ -1262,14 +1264,12 @@
               translateBtn.classList.remove("translating");
               translateBtn.classList.add("translated");
               translateBtn.title = "Show original";
-              translateBtn.innerHTML =
-                '<i class="fa-solid fa-language"></i>';
+              if (spinIcon) spinIcon.className = "fa-solid fa-language";
               applyBioToggle(bioEl);
             })
             .catch(function () {
               translateBtn.classList.remove("translating");
-              translateBtn.innerHTML =
-                '<i class="fa-solid fa-language"></i>';
+              if (spinIcon) spinIcon.className = "fa-solid fa-language";
               showToast("Translation failed");
             });
         });
@@ -3021,6 +3021,7 @@
       
       document.querySelector(".app").addEventListener("click", function (e) {
       if (e.target.closest(".settings-overlay") || e.target.closest(".presets-overlay") || e.target.closest(".confirm-overlay") || e.target.closest(".pfp-overlay")) return;
+      if (e.target.closest(".dating-card") || e.target.closest(".liked-grid-item") || e.target.closest(".leaderboard-search-result")) return;
       var ds = document.querySelector(".details-section");
       if (ds && ds.classList.contains("open") && !ds.contains(e.target)) {
         ds.classList.remove("open");
