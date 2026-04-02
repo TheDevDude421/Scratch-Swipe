@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dating - Scratch Swipe</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" integrity="..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <div class="app">
+        <div class="topbar">
+            <div class="topbar-container">
+                <div class="topbar-header-container">
+                    <p class="topbar-header">Search</p>
+                    <button class="circular-btn" id="settings-btn"><i class="fa-solid fa-gear icon"></i></button>
+                </div>
+                <div class="topbar-input-container">
+                    <div class="searchbar">
+                        <i class="fa-solid fa-magnifying-glass icon"></i>
+                        <input id="search-input" class="search-input" autocomplete="off" placeholder="Search here...">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="search">
+            <div class="chip-container">
+                <div class="chip-info selected" id="search-all">All</div>
+                <div class="chip-info" id="search-users">Users</div>
+                <div class="chip-info" id="search-interests">Interests</div>
+                <div class="chip-info" id="search-places">Places</div>
+                <div class="chip-info" id="search-ids">IDs</div>
+            </div>
+            <div class="search-results">
+            </div>
+        </div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
