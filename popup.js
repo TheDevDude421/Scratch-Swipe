@@ -968,6 +968,9 @@
     .presets-empty { padding: 30px 16px; text-align: center; color: var(--white3); font-size: 13px; }
     .view-presets-link { color: var(--primary); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 7.5px; transition: opacity 0.2s; user-select: none; flex-shrink: 0; }
     .view-presets-link:hover { opacity: 0.8; }
+        @media (hover: none) and (pointer: coarse) {
+      input[type="text"], input[type="number"], input[type="search"], .prompt-input, .custom-select-search-input, .search-input { font-size: 16px !important; }
+    }
 
     /* ══════════════════════════════════════════════════════
        Settings Modal
