@@ -874,6 +874,7 @@
     @keyframes pfpImgOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.55); opacity: 0; } }
 
     .details-section .profile-header .profile-picture { cursor: pointer; }
+    .details-section .profile-header .profile-picture { cursor: pointer; }
     .id-container { display: flex; flex-direction: row; align-items: center; gap: 5px; font-size: 14px; }
     .id-container .icon { color: var(--white4); font-size: 12px; } .id-container .id { color: var(--white3); }
 
@@ -1032,6 +1033,12 @@
     .prompt-input:focus { border-color: var(--primary); }
     .ss-toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(12px); background: var(--bg4, #2a2a2a); color: var(--white1); padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 99999; opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; box-shadow: 0 4px 20px rgba(0,0,0,0.4); white-space: nowrap; }
     .ss-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .zoom-stepper { display: flex; align-items: center; gap: 0; background: var(--bg1); border-radius: 10px; border: 1px solid var(--bg4); overflow: hidden; }
+    .zoom-stepper-btn { width: 40px; height: 38px; background: none; border: none; color: var(--white3); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
+    .zoom-stepper-btn:hover { background: rgba(255,255,255,0.06); color: var(--white1); }
+    .zoom-stepper-btn:active { background: rgba(255,255,255,0.1); }
+    .zoom-stepper-btn:disabled { opacity: 0.3; pointer-events: none; }
+    .zoom-stepper-value { width: 52px; text-align: center; font-size: 14px; font-weight: bold; color: var(--white1); border-left: 1px solid var(--bg4); border-right: 1px solid var(--bg4); padding: 8px 0; user-select: none; }
   `;
   document.head.appendChild(sharedStyle);
 
@@ -1336,6 +1343,7 @@
       '<p class="settings-note" id="discover-note"></p>' +
       "</div></div>" +
       '<div class="settings-tab-content" data-tab="appearance">' +
+      '<div class="setting-row"><div class="setting-info"><span class="setting-label">Zoom Level</span><span class="setting-desc">Scale the entire app interface</span></div><div class="zoom-stepper" id="zoom-stepper"><button class="zoom-stepper-btn" id="zoom-decrease"><i class="fa-solid fa-minus"></i></button><div class="zoom-stepper-value" id="zoom-value">100%</div><button class="zoom-stepper-btn" id="zoom-increase"><i class="fa-solid fa-plus"></i></button></div></div>' +
       '<div class="setting-row"><div class="setting-info"><span class="setting-label">Ambient Background</span><span class="setting-desc">Blurred colour glow behind cards</span></div><div id="toggle-ambient"></div></div>' +
       '<div class="setting-row"><div class="setting-info"><span class="setting-label">Entry Animations</span><span class="setting-desc">Slide-up animation for new results</span></div><div id="toggle-entry-anim"></div></div>' +
       "</div>" +
@@ -1404,6 +1412,33 @@
       applyAppearanceSetting("entryAnimations", val);
     });
     document.getElementById("toggle-entry-anim").appendChild(et);
+    (function initZoomStepper() {
+      var ZOOM_KEY = "scratchswipe_zoom";
+      var MIN = 0.5, MAX = 2, STEP = 0.1;
+      var valEl = document.getElementById("zoom-value");
+      var decBtn = document.getElementById("zoom-decrease");
+      var incBtn = document.getElementById("zoom-increase");
+      var level = 1;
+      try { level = parseFloat(localStorage.getItem(ZOOM_KEY)) || 1; } catch(_) {}
+      level = Math.max(MIN, Math.min(MAX, level));
+      function update() {
+        valEl.textContent = Math.round(level * 100) + "%";
+        decBtn.disabled = level <= MIN;
+        incBtn.disabled = level >= MAX;
+        var app = document.querySelector(".app");
+        if (app) app.style.zoom = level;
+        try { localStorage.setItem(ZOOM_KEY, String(level)); } catch(_) {}
+      }
+      decBtn.addEventListener("click", function () {
+        level = Math.max(MIN, Math.round((level - STEP) * 10) / 10);
+        update();
+      });
+      incBtn.addEventListener("click", function () {
+        level = Math.min(MAX, Math.round((level + STEP) * 10) / 10);
+        update();
+      });
+      update();
+    })();
     _toggleRefs.entryAnimations = et;
     const adv = window.ScratchSwipe.settings.advanced;
     const lt = createToggleSwitch(adv.lazyLoading, (val) => {
@@ -2983,6 +3018,14 @@
       navLB.addEventListener("click", function () {
         if (!onLeaderboard) window.location.href = "leaderboard.html";
       });
+      
+      document.querySelector(".app").addEventListener("click", function (e) {
+      if (e.target.closest(".settings-overlay") || e.target.closest(".presets-overlay") || e.target.closest(".confirm-overlay") || e.target.closest(".pfp-overlay")) return;
+      var ds = document.querySelector(".details-section");
+      if (ds && ds.classList.contains("open") && !ds.contains(e.target)) {
+        ds.classList.remove("open");
+      }
+    });
     createSettingsModal();
     injectDetailsSection();
     if (onDiscover) initIndex().catch(console.error);
