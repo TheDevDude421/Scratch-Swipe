@@ -97,6 +97,11 @@
      Filter Tags Parser
   ---------------------------------------------------------- */
 
+  function bioHasWord(bio, word) {
+    var escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp("\\b" + escaped + "\\b").test(bio);
+  }
+
   function parseFilterTags(input) {
     if (!input || !input.trim()) return { required: [], optional: [] };
     var required = [];
@@ -163,7 +168,7 @@
       var group = parsed.required[i];
       if (
         !group.some(function (tag) {
-          return bio.includes(tag);
+          return bioHasWord(bio, tag);
         })
       )
         return false;
@@ -171,7 +176,7 @@
     if (parsed.optional.length > 0) {
       var anyMatch = parsed.optional.some(function (group) {
         return group.some(function (tag) {
-          return bio.includes(tag);
+          return bioHasWord(bio, tag);
         });
       });
       if (!anyMatch) return false;
@@ -1789,8 +1794,9 @@
           .filter(Boolean);
         if (reqTerms.length > 0) {
           users = users.filter(function (u) {
+            var bio = (u.bio || "").toLowerCase();
             return reqTerms.every(function (tag) {
-              return (u.bio || "").toLowerCase().includes(tag);
+              return bioHasWord(bio, tag);
             });
           });
         }
@@ -2383,13 +2389,13 @@
     function scoreUser(user, query, filter) {
       var q = query.toLowerCase();
       if (!q) return 0;
-      if (
-        requiredTerms.length > 0 &&
-        !requiredTerms.every(function (t) {
-          return (user.bio || "").toLowerCase().includes(t);
-        })
-      )
-        return 0;
+      if (requiredTerms.length > 0) {
+        var bio = (user.bio || "").toLowerCase();
+        if (!requiredTerms.every(function (t) {
+          return bioHasWord(bio, t);
+        }))
+          return 0;
+      }
       return scoreUserByQuery(user, query, filter);
     }
 
