@@ -630,37 +630,49 @@
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
-    const threshold = 80;
+    const threshold = 100;
 
+    // Use a capturing listener for touchstart to catch it before scroll starts
     document.addEventListener("touchstart", function(e) {
+      const ds = document.querySelector(".details-section.open");
+      if (!ds) return;
+      if (ds.contains(e.target)) {
+        startY = e.touches[0].clientY;
+        currentY = startY;
+      }
+    }, { passive: true, capture: true });
+
+    document.addEventListener("touchmove", function(e) {
       const ds = document.querySelector(".details-section.open");
       if (!ds) { isDragging = false; return; }
       
-      // Start swipe only if touching details-section at the very top of its scroll
-      if (ds.contains(e.target) && ds.scrollTop <= 0) {
-        startY = e.touches[0].clientY;
-        currentY = startY;
-        isDragging = true;
-      } else {
-        isDragging = false;
-      }
-    }, { passive: true });
+      const touchY = e.touches[0].clientY;
+      const diff = touchY - startY;
 
-    document.addEventListener("touchmove", function(e) {
-      if (!isDragging) return;
-      currentY = e.touches[0].clientY;
-      const diff = currentY - startY;
-      
-      if (diff > 0) {
-        const ds = document.querySelector(".details-section.open");
-        if (ds) {
+      // START DRAGGING condition: at the top of scroll and moving down
+      if (!isDragging && ds.scrollTop <= 0 && diff > 5 && ds.contains(e.target)) {
+        isDragging = true;
+        startY = touchY; // Reset to avoid jump
+      }
+
+      if (isDragging) {
+        currentY = touchY;
+        const currentDiff = currentY - startY;
+        
+        if (currentDiff > 0) {
+          // BLOCK browser overscroll/refresh
           if (e.cancelable) e.preventDefault();
           ds.style.transition = "none";
-          ds.style.transform = `translateY(${diff}px)`;
+          ds.style.transform = `translateY(${currentDiff}px)`;
           
-          // Reposition blocker to bottom to prevent Chrome refresh
+          // Reposition blocker to bottom
           const blocker = document.querySelector(".refresh-blocker");
           if (blocker && blocker.scrollTop < 100) blocker.scrollTop = 200;
+        } else {
+          // If they swipe back up past the start point, stop dragging and allow scrolling
+          isDragging = false;
+          ds.style.transition = "";
+          ds.style.transform = "";
         }
       }
     }, { passive: false });
@@ -670,15 +682,13 @@
       const ds = document.querySelector(".details-section.open");
       if (ds) {
         const diff = currentY - startY;
-        ds.style.transition = ""; // Restore the CSS transition
+        ds.style.transition = ""; // Restore transition for snap
         if (diff > threshold) {
-          // If pulled far enough, remove the class to trigger CSS translateY(100%)
           ds.classList.remove("open");
           ds.style.transform = "";
         } else {
-          // Otherwise, snap back to open position
           ds.style.transform = "translateY(0%)";
-          // Small timeout to clear the inline style after transition
+          // Cleanup inline style after snap animation
           setTimeout(() => {
             if (ds.classList.contains("open")) ds.style.transform = "";
           }, 400);
