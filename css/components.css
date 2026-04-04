@@ -1,0 +1,59 @@
+.circular-btn {
+  all: unset;
+  width: 32px;
+  height: 32px;
+  aspect-ratio: 1 / 1;
+  font-size: 12px;
+  box-sizing: border-box;
+  border-radius: 360px;
+  color: var(--white2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.1) 40%,
+    rgba(255, 255, 255, 0.2) 80%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  cursor: pointer;
+}
+
+.chip-container {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+}
+
+.chip-info {
+  backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 5px 10px;
+  border-radius: 360px;
+  font-size: 10px;
+  color: var(--white1);
+}
+
+.chip-info.selected {
+  background-color: rgba(255,255,255,1) !important;
+  color: #000 !important;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) rotate(25deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(25deg);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

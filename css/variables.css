@@ -1,0 +1,22 @@
+:root {
+  font-family: Inter, sans-serif;
+  --white1: #dedede;
+  --white2: #b7b7b7;
+  --white3: #868686;
+  --white4: #4d4d4d;
+  --bg1: #141414;
+  --bg2: #1f1f1f;
+  --bg3: #2a2a2a;
+  --bg4: #353535;
+  --bg5: #404040;
+  --bg6: #4b4b4b;
+  --primary: #d18e31;
+}
+
+@supports (font-variation-settings: normal) {
+  :root {
+    font-family: InterVariable, sans-serif;
+  }
+}
+
+@link "https://rsms.me/inter/inter.css";

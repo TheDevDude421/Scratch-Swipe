@@ -1,0 +1,9 @@
+.liked-content {
+  height: 100%;
+  padding: 15px;
+  padding-top: 0px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
