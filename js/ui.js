@@ -621,8 +621,9 @@
     document.body.appendChild(blocker);
     blocker.scrollTop = 200;
 
+    // Reposition to bottom on any touch start to ensure we have "room" to scroll up
     window.addEventListener("touchstart", function() {
-      if (blocker.scrollTop === 0) blocker.scrollTop = 200;
+      if (blocker.scrollTop < 150) blocker.scrollTop = 200;
     }, { passive: true });
   }
 
@@ -633,10 +634,12 @@
 
     document.addEventListener("touchstart", function(e) {
       const ds = document.querySelector(".details-section.open");
-      if (!ds) return;
-      // Only start swipe if touching the details section at its top scroll position
+      if (!ds) { startY = 0; return; }
+      
+      // Only start swipe-to-close if touching the details section at its top scroll position
       if (ds.contains(e.target) && ds.scrollTop <= 0) {
         startY = e.touches[0].pageY;
+        currentY = startY;
       } else {
         startY = 0;
       }
@@ -646,21 +649,27 @@
       if (startY === 0) return;
       currentY = e.touches[0].pageY;
       const diff = currentY - startY;
+      
       const ds = document.querySelector(".details-section.open");
       if (ds && diff > 0) {
-        // Prevent default only if swiping down from the top
-        // e.preventDefault(); // Passive listener cannot preventDefault
+        // Prevent browser pull-to-refresh/overscroll when swiping to close
+        if (e.cancelable) e.preventDefault();
+        
         ds.style.transition = "none";
         ds.style.transform = `translateY(${diff}px)`;
-      }
-    }, { passive: true });
 
-    document.addEventListener("touchend", function() {
+        // User request: reposition blocker to bottom when swiping top to bottom
+        const blocker = document.querySelector(".refresh-blocker");
+        if (blocker) blocker.scrollTop = 200;
+      }
+    }, { passive: false });
+
+    function handleEnd() {
       if (startY === 0) return;
       const ds = document.querySelector(".details-section.open");
       if (ds) {
         const diff = currentY - startY;
-        ds.style.transition = "";
+        ds.style.transition = ""; // Restore CSS transition
         if (diff > threshold) {
           ds.classList.remove("open");
           ds.style.transform = "";
@@ -670,7 +679,10 @@
       }
       startY = 0;
       currentY = 0;
-    }, { passive: true });
+    }
+
+    document.addEventListener("touchend", handleEnd, { passive: true });
+    document.addEventListener("touchcancel", handleEnd, { passive: true });
   }
 
   if (document.readyState === "loading") {
