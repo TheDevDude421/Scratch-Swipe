@@ -621,62 +621,70 @@
     document.body.appendChild(blocker);
     blocker.scrollTop = 200;
 
-    // Reposition to bottom on any touch start to ensure we have "room" to scroll up
     window.addEventListener("touchstart", function() {
-      if (blocker.scrollTop < 150) blocker.scrollTop = 200;
+      if (blocker.scrollTop < 100) blocker.scrollTop = 200;
     }, { passive: true });
   }
 
   function initSwipeToClose() {
     let startY = 0;
     let currentY = 0;
+    let isDragging = false;
     const threshold = 80;
 
     document.addEventListener("touchstart", function(e) {
       const ds = document.querySelector(".details-section.open");
-      if (!ds) { startY = 0; return; }
+      if (!ds) { isDragging = false; return; }
       
-      // Only start swipe-to-close if touching the details section at its top scroll position
+      // Start swipe only if touching details-section at the very top of its scroll
       if (ds.contains(e.target) && ds.scrollTop <= 0) {
-        startY = e.touches[0].pageY;
+        startY = e.touches[0].clientY;
         currentY = startY;
+        isDragging = true;
       } else {
-        startY = 0;
+        isDragging = false;
       }
     }, { passive: true });
 
     document.addEventListener("touchmove", function(e) {
-      if (startY === 0) return;
-      currentY = e.touches[0].pageY;
+      if (!isDragging) return;
+      currentY = e.touches[0].clientY;
       const diff = currentY - startY;
       
-      const ds = document.querySelector(".details-section.open");
-      if (ds && diff > 0) {
-        // Prevent browser pull-to-refresh/overscroll when swiping to close
-        if (e.cancelable) e.preventDefault();
-        
-        ds.style.transition = "none";
-        ds.style.transform = `translateY(${diff}px)`;
-
-        // User request: reposition blocker to bottom when swiping top to bottom
-        const blocker = document.querySelector(".refresh-blocker");
-        if (blocker) blocker.scrollTop = 200;
+      if (diff > 0) {
+        const ds = document.querySelector(".details-section.open");
+        if (ds) {
+          if (e.cancelable) e.preventDefault();
+          ds.style.transition = "none";
+          ds.style.transform = `translateY(${diff}px)`;
+          
+          // Reposition blocker to bottom to prevent Chrome refresh
+          const blocker = document.querySelector(".refresh-blocker");
+          if (blocker && blocker.scrollTop < 100) blocker.scrollTop = 200;
+        }
       }
     }, { passive: false });
 
     function handleEnd() {
-      if (startY === 0) return;
+      if (!isDragging) return;
       const ds = document.querySelector(".details-section.open");
       if (ds) {
         const diff = currentY - startY;
-        ds.style.transition = ""; // Restore CSS transition
+        ds.style.transition = ""; // Restore the CSS transition
         if (diff > threshold) {
+          // If pulled far enough, remove the class to trigger CSS translateY(100%)
           ds.classList.remove("open");
           ds.style.transform = "";
         } else {
+          // Otherwise, snap back to open position
           ds.style.transform = "translateY(0%)";
+          // Small timeout to clear the inline style after transition
+          setTimeout(() => {
+            if (ds.classList.contains("open")) ds.style.transform = "";
+          }, 400);
         }
       }
+      isDragging = false;
       startY = 0;
       currentY = 0;
     }
