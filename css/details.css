@@ -11,13 +11,15 @@
   padding: 20px;
   box-sizing: border-box;
   overflow-y: auto;
-  overscroll-behavior-y: contain;
-  transform: translateY(100%);
+  overscroll-behavior-y: none;
+  transform: translate3d(0, 100%, 0);
   transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .details-section.open {
-  transform: translateY(0%);
+  transform: translate3d(0, 0%, 0);
 }
 
 .details-section::-webkit-scrollbar {

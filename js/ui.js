@@ -43,12 +43,13 @@
     .ambient-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(45px) saturate(3); z-index: 0; pointer-events: none; border-radius: inherit; transition: opacity 0.35s ease; }
     .ambient-layer.hidden { opacity: 0; } .ambient-layer.visible { opacity: 0.25; }
     .ambient-off .ambient-layer { display: none !important; }
+    .card-blur-off .gradient-overlay::before { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
     .preload-pool { position: fixed; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; left: -9999px; top: -9999px; }
     .search-results .dating-card { cursor: pointer; }
     .bio-truncated { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
     .bio-read-toggle { all: unset; color: #0088ff; font-size: 12px; cursor: pointer; display: block; margin-top: 4px; }
 
-    .search-section-header { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 12px 0 4px; }
+    .search-section-header { display: flex; align-items: center; gap: 6px; font-size: 14px; margin: 12px 0 0px; }
     .search-section-header .section-count { color: var(--white3); font-weight: normal; }
     .search-section-discover-btn { margin-left: auto; cursor: pointer; color: var(--white3); font-size: 13px; transition: color 0.2s; flex-shrink: 0; padding: 2px; }
     .search-section-discover-btn:hover { color: var(--primary); }
@@ -57,7 +58,7 @@
     @keyframes spinLoader { to { transform: rotate(360deg); } }
     .search-load-sentinel img { width: 26px; height: 26px; animation: spinLoader 0.7s linear infinite; }
 
-    .leaderboard-results { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+    .leaderboard-results { display: flex; flex-direction: column; gap: 4px; }
     .leaderboard-results .dating-card { width: 100%; height: 54px; display: flex; flex-direction: row; align-items: center; gap: 10px; cursor: pointer; }
     .leaderboard-results .dating-card-rank { font-size: 16px; font-weight: bold; color: #868686; min-width: 28px; text-align: right; flex-shrink: 0; }
     .leaderboard-results .dating-card-rank.rank-1 { color: #f9c53a; } .leaderboard-results .dating-card-rank.rank-2 { color: #b0b8c8; } .leaderboard-results .dating-card-rank.rank-3 { color: #d18e31; }
@@ -125,8 +126,8 @@
     .search-filter-btn { background: none; border: none; color: var(--white3); font-size: 15px; cursor: pointer; padding: 8px; border-radius: 8px; transition: color 0.2s, background 0.15s; flex-shrink: 0; }
     .search-filter-btn:hover { color: var(--white1); background: rgba(255,255,255,0.06); }
     .search-filter-btn.has-active-filters { color: var(--primary); }
-    .search-filter-popover { position: absolute; top: calc(100% + 6px); right: 0; width: 260px; background: var(--bg2); border: 1px solid var(--bg4); border-radius: 14px; padding: 16px; z-index: 10001; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); opacity: 0; transform: translateY(-8px) scale(0.97); pointer-events: none; transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.32, 0.72, 0, 1); }
-    .search-filter-popover.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+    .search-filter-popover { position: absolute; top: calc(100% + 6px); right: 0; width: 290px; background: var(--bg2); border: 1px solid var(--bg4); border-radius: 14px; padding: 16px; z-index: 10001; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); opacity: 0; visibility: hidden; transform: translateY(-8px) scale(0.97); pointer-events: none; transition: opacity 0.2s ease, visibility 0.2s, transform 0.2s cubic-bezier(0.32, 0.72, 0, 1); }
+    .search-filter-popover.open { opacity: 1; visibility: visible; transform: translateY(0) scale(1); pointer-events: auto; }
     .search-filter-sort { display: flex; gap: 3px; background: var(--bg1); border-radius: 8px; padding: 3px; }
     .search-filter-sort-option { flex: 1; padding: 7px 0; text-align: center; font-size: 11px; font-weight: bold; color: var(--white3); border-radius: 6px; cursor: pointer; transition: background 0.2s, color 0.2s; user-select: none; }
     .search-filter-sort-option.selected { background: var(--bg4); color: var(--white1); }
@@ -135,6 +136,12 @@
     .search-filter-popover input[type="text"]::placeholder { color: var(--white3); }
     .search-filter-popover .sf-label { color: var(--white3); font-size: 11px; font-weight: bold; margin: 0; }
     .search-filter-popover .sf-desc { color: var(--white3); font-size: 10px; margin: 0; opacity: 0.7; }
+    .sf-toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+    .sf-label-group { display: flex; flex-direction: column; gap: 2px; }
+    
+    .discover-filter-popover { right: 16px; top: 60px; }
+    #discover-filter-btn.has-active-filters { color: var(--primary); }
+    .circular-btn.has-active-filters { color: var(--primary); }
 
     /* ── Discover Back-to-Search Banner ── */
     .discover-back-banner {
@@ -183,7 +190,7 @@
     .view-presets-link { color: var(--primary); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 7.5px; transition: opacity 0.2s; user-select: none; flex-shrink: 0; }
     .view-presets-link:hover { opacity: 0.8; }
         @media (hover: none) and (pointer: coarse) {
-      input[type="text"], input[type="number"], input[type="search"], .prompt-input, .custom-select-search-input, .search-input { font-size: 16px !important; }
+      input[type="text"], input[type="number"], input[type="search"], .prompt-input, .custom-select-search-input, .search-input { font-size: 16px !important; transform: scale(0.8); transform-origin: left center; }
     }
 
     /* ══════════════════════════════════════════════════════
@@ -258,6 +265,70 @@
     .zoom-stepper-btn:active { background: rgba(255,255,255,0.1); }
     .zoom-stepper-btn:disabled { opacity: 0.3; pointer-events: none; }
     .zoom-stepper-value { width: 52px; text-align: center; font-size: 14px; font-weight: bold; color: var(--white1); border-left: 1px solid var(--bg4); border-right: 1px solid var(--bg4); padding: 8px 0; user-select: none; }
+
+    /* ── Filter Builder ── */
+    .filter-builder { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .fb-group { background: var(--bg1); border: 1px solid var(--bg4); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .fb-group-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .fb-group-type { display: flex; gap: 3px; background: var(--bg2); padding: 3px; border-radius: 8px; flex-shrink: 0; }
+    .fb-group-type-btn { padding: 4px 8px; font-size: 10px; font-weight: bold; border-radius: 6px; cursor: pointer; color: var(--white3); transition: background 0.2s, color 0.2s; user-select: none; }
+    .fb-group-type-btn.active { background: var(--bg4); color: var(--white1); }
+    .fb-group-type-btn.active.required { color: var(--primary); }
+    .fb-group-type-btn.active.exclude { color: #ff6b6b; }
+    .fb-group-delete { color: var(--white4); cursor: pointer; font-size: 12px; transition: color 0.2s; padding: 4px; }
+    .fb-group-delete:hover { color: #ff6b6b; }
+    .fb-tag-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .fb-tag { background: var(--bg4); color: var(--white2); padding: 4px 8px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; gap: 6px; }
+    .fb-tag-remove { cursor: pointer; opacity: 0.6; transition: opacity 0.2s; }
+    .fb-tag-remove:hover { opacity: 1; }
+    .fb-tag-add-wrap { position: relative; display: flex; align-items: center; }
+    .fb-tag-add-input { background: none; border: none; color: var(--white1); font-size: 11px; outline: none; width: 60px; transition: width 0.2s; }
+    .fb-tag-add-input:focus { width: 100px; }
+    .fb-tag-add-input::placeholder { color: var(--white4); }
+    .fb-builder-add-btn { background: var(--bg1); border: 1px dashed var(--bg4); color: var(--white3); padding: 10px; border-radius: 10px; font-size: 12px; cursor: pointer; text-align: center; transition: border-color 0.2s, color 0.2s; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; }
+    .fb-builder-add-btn:hover { border-color: var(--primary); color: var(--white1); }
+
+    /* ── Filter Popup ── */
+    .filter-popup-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 10000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+    .filter-popup-overlay.visible { opacity: 1; pointer-events: auto; }
+    .filter-popup-modal { background: var(--bg2); width: 90%; max-width: 360px; max-height: 85vh; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 6px; transform: translateY(20px) scale(0.95); transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1); box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow: hidden; }
+    .filter-popup-overlay.visible .filter-popup-modal { transform: translateY(0) scale(1); }
+    .filter-popup-header { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .filter-popup-header h3 { color: var(--white1); font-size: 18px; margin: 0; }
+    .filter-popup-content { flex: 1; overflow-y: auto; }
+    .filter-popup-content::-webkit-scrollbar { display: none; }
+    .filter-popup-footer { display: flex; gap: 10px; margin-top: 14px; flex-shrink: 0; }
+    .filter-popup-footer button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 14px; font-weight: bold; cursor: pointer; transition: filter 0.2s; }
+    .filter-popup-footer .btn-cancel { background: var(--bg4); color: var(--white1); }
+    .filter-popup-footer .btn-apply { background: var(--primary); color: #fff; }
+    .filter-trigger-btn { width: 100%; padding: 12px; background: var(--bg1); border: 1px solid var(--bg4); border-radius: 10px; color: var(--white2); font-size: 13px; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: border-color 0.2s, background 0.2s; }
+    .filter-trigger-btn:hover { border-color: var(--primary); background: rgba(255,255,255,0.02); }
+    .filter-trigger-btn .count-badge { background: var(--primary); color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 360px; }
+
+    /* ── Filter Summary (for presets list) ── */
+    .fb-summary { display: flex; flex-direction: column; gap: 4px; }
+    .fb-summary-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .fb-summary-label { font-size: 9px; font-weight: bold; text-transform: uppercase; color: var(--white4); width: 100%; margin-bottom: 3px; margin-top: 9px; }
+    .fb-summary-tag { font-size: 10px; padding: 3px 7px; border-radius: 6px; background: var(--bg4); color: var(--white2); display: inline-block; }
+    .fb-summary-tag.required { background-color: var(--bg4); color: var(--white2); }
+    .fb-summary-tag.exclude { background-color: rgba(255, 107, 107, 0.15); color: #ff6b6b; }
+
+    /* ── Filter Popup View Transitions ── */
+    .filter-popup-modal[data-view="presets"] .filter-builder-view { display: none; }
+    .filter-popup-modal[data-view="builder"] .filter-presets-view { display: none; }
+    
+    .presets-list-in-popup { display: flex; flex-direction: column; gap: 10px; }
+    .preset-item-card { background: var(--bg1); border: 1px solid var(--bg4); border-radius: 12px; padding: 12px; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
+    .preset-item-card:hover { background: rgba(255,255,255,0.02); }
+    .preset-item-card .preset-name { font-size: 13px; font-weight: bold; color: var(--white1); display: block; }
+    .preset-item-card .preset-delete-btn { position: absolute; top: 10px; right: 10px; color: var(--white4); cursor: pointer; padding: 4px; font-size: 12px; transition: color 0.2s; }
+    .preset-item-card .preset-delete-btn:hover { color: #ff6b6b; }
+    .preset-section-title { font-size: 10px; font-weight: bold; text-transform: uppercase; color: var(--white4); margin-top: 10px; letter-spacing: 0.5px; }
+    
+    .filter-popup-sub-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--bg4); padding-bottom: 10px; flex-shrink: 0; }
+    .preset-item-card.selected { border-color: var(--primary); background: rgba(255,255,255,0.02); }
+    .btn-view-toggle { background: none; border: none; color: var(--primary); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+    .btn-view-toggle:hover { opacity: 0.8; }
   `;
   document.head.appendChild(sharedStyle);
 
@@ -329,8 +400,8 @@
           "custom-select-option" +
           (opt.value === currentValue ? " selected" : "");
         el.textContent = opt.label;
-        el.addEventListener("mousedown", (e) => {
-          e.preventDefault();
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
           currentValue = opt.value;
           valueSpan.textContent = opt.label;
           closeDropdown();
@@ -371,6 +442,9 @@
       e.stopPropagation();
       if (isOpen) closeDropdown();
       else openDropdown();
+    });
+    dropdown.addEventListener("click", (e) => {
+      e.stopPropagation();
     });
     document.addEventListener("click", (e) => {
       if (isOpen && !container.contains(e.target)) closeDropdown();
@@ -542,14 +616,18 @@
   }
 
   const BIO_LINE_LIMIT = 4;
+  let _cachedBioLineHeight = null;
   function applyBioToggle(bioEl) {
     if (!bioEl) return;
     const prev = bioEl.nextElementSibling;
     if (prev && prev.classList.contains("bio-read-toggle")) prev.remove();
     bioEl.classList.remove("bio-truncated");
+    
     requestAnimationFrame(() => {
-      const lh = parseFloat(getComputedStyle(bioEl).lineHeight) || 19.2;
-      if (bioEl.scrollHeight > lh * BIO_LINE_LIMIT + 4) {
+      if (!_cachedBioLineHeight) {
+        _cachedBioLineHeight = parseFloat(getComputedStyle(bioEl).lineHeight) || 19.2;
+      }
+      if (bioEl.scrollHeight > _cachedBioLineHeight * BIO_LINE_LIMIT + 4) {
         bioEl.classList.add("bio-truncated");
         let open = false;
         const btn = document.createElement("button");
@@ -605,7 +683,377 @@
     showToast,
     applyBioToggle,
     openPfpViewer,
+    createFilterBuilder,
+    showFilterPopup,
+    createFilterSummary,
   });
+
+  function createFilterSummary(filterString) {
+    const container = document.createElement("div");
+    container.className = "fb-summary";
+    const parsed = window.ScratchSwipe.parseFilterTags(filterString);
+    
+    function addRows(label, groups, className) {
+      groups.forEach(groupObj => {
+        if (!groupObj.terms || !groupObj.terms.length) return;
+        const row = document.createElement("div");
+        row.className = "fb-summary-row";
+        const lbl = document.createElement("div");
+        lbl.className = "fb-summary-label";
+        lbl.textContent = label;
+        row.appendChild(lbl);
+        groupObj.terms.forEach(tag => {
+          const t = document.createElement("span");
+          t.className = "fb-summary-tag " + className;
+          t.textContent = tag;
+          row.appendChild(t);
+        });
+        container.appendChild(row);
+      });
+    }
+
+    addRows("Must Have", parsed.required, "required");
+    addRows("Optional", parsed.optional, "");
+    addRows("Exclude", parsed.exclude, "exclude");
+    
+    if (!container.children.length) {
+      container.innerHTML = '<span style="font-size:10px; color:var(--white4); font-style:italic;">No tags</span>';
+    }
+    
+    return container;
+  }
+
+  function showFilterPopup(initialValue, onApply, initialView = "builder") {
+    const overlay = document.createElement("div");
+    overlay.className = "filter-popup-overlay";
+    const modal = document.createElement("div");
+    modal.className = "filter-popup-modal";
+    modal.dataset.view = initialView;
+    modal.innerHTML = `
+      <div class="filter-popup-header">
+        <h3 id="fp-title">${initialView === "presets" ? "Presets" : "Filter Tags"}</h3>
+        <button class="close-settings" id="fp-close" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="filter-popup-sub-header">
+        <div style="display:flex; gap:12px; align-items:center; justify-content: space-between; width: 100%;">
+          <button class="btn-view-toggle" id="fp-view-toggle">
+            ${initialView === "presets" ? '<i class="fa-solid fa-arrow-left"></i><span>Edit Filter Tags</span>' : '<i class="fa-solid fa-bookmark"></i><span>View All Presets</span>'}
+          </button>
+          <button class="btn-save-preset" id="fp-save-preset" style="${initialView === "presets" ? "display:none;" : "display:flex;"}">
+            <i class="fa-solid fa-plus"></i><span>Save as Preset</span>
+          </button>
+        </div>
+      </div>
+      <div class="filter-popup-content">
+        <div class="filter-builder-view" style="${initialView === "presets" ? "display:none;" : "display:block;"}"></div>
+        <div class="filter-presets-view" style="${initialView === "presets" ? "display:block;" : "display:none;"}">
+          <div class="presets-list-in-popup"></div>
+        </div>
+      </div>
+      <div class="filter-popup-footer">
+        <button class="btn-cancel">Cancel</button>
+        <button class="btn-apply">Apply</button>
+      </div>
+    `;
+    
+    const builderContainer = modal.querySelector(".filter-builder-view");
+    const presetsContainer = modal.querySelector(".filter-presets-view");
+    const presetsList = modal.querySelector(".presets-list-in-popup");
+    const viewToggle = modal.querySelector("#fp-view-toggle");
+    const titleEl = modal.querySelector("#fp-title");
+    
+    const builder = createFilterBuilder(initialValue);
+    builderContainer.appendChild(builder);
+    
+    let selectedPresets = new Set();
+    
+    if (initialView === "presets") renderPresetsView();
+    
+    function setView(view) {
+      modal.dataset.view = view;
+      const saveBtn = modal.querySelector("#fp-save-preset");
+      const applyBtn = modal.querySelector(".btn-apply");
+      if (view === "presets") {
+        titleEl.textContent = "Presets";
+        viewToggle.innerHTML = '<i class="fa-solid fa-arrow-left"></i><span>Edit Filter Tags</span>';
+        builderContainer.style.display = "none";
+        presetsContainer.style.display = "block";
+        if (saveBtn) saveBtn.style.display = "none";
+        if (applyBtn) applyBtn.textContent = "Add";
+        selectedPresets.clear();
+        renderPresetsView();
+      } else {
+        titleEl.textContent = "Filter Tags";
+        viewToggle.innerHTML = '<i class="fa-solid fa-bookmark"></i><span>View All Presets</span>';
+        builderContainer.style.display = "block";
+        presetsContainer.style.display = "none";
+        if (saveBtn) saveBtn.style.display = "flex";
+        if (applyBtn) applyBtn.textContent = "Apply";
+      }
+    }
+    
+    modal.querySelector("#fp-save-preset").onclick = () => {
+      const tags = builder.value.trim();
+      if (!tags) {
+        window.ScratchSwipe.showToast("Add some filter tags first");
+        return;
+      }
+      window.ScratchSwipe.showPrompt("Name this preset", "", (name) => {
+        let userPresets = [];
+        try { userPresets = JSON.parse(localStorage.getItem("scratchswipe_presets") || "[]"); } catch(_) {}
+        userPresets.push({ name: name, tag: tags });
+        localStorage.setItem("scratchswipe_presets", JSON.stringify(userPresets));
+        window.ScratchSwipe.showToast("Preset saved");
+        if (modal.dataset.view === "presets") renderPresetsView();
+      });
+    };
+    
+    function renderPresetsView() {
+      presetsList.innerHTML = "";
+      const DEFAULT_PRESETS = window.ScratchSwipe.DEFAULT_PRESETS || [];
+      let userPresets = [];
+      try { userPresets = JSON.parse(localStorage.getItem("scratchswipe_presets") || "[]"); } catch(_) {}
+      
+      if (DEFAULT_PRESETS.length) {
+        const t = document.createElement("div"); t.className = "preset-section-title"; t.textContent = "Built-in";
+        presetsList.appendChild(t);
+        DEFAULT_PRESETS.forEach(p => presetsList.appendChild(createPresetCard(p, false)));
+      }
+      
+      if (userPresets.length) {
+        const t = document.createElement("div"); t.className = "preset-section-title"; t.textContent = "Custom";
+        presetsList.appendChild(t);
+        userPresets.forEach((p, i) => presetsList.appendChild(createPresetCard(p, true, i)));
+      }
+    }
+    
+    function createPresetCard(preset, canDelete, index) {
+      const card = document.createElement("div");
+      card.className = "preset-item-card";
+      if (selectedPresets.has(preset.tag)) card.classList.add("selected");
+      card.innerHTML = `<span class="preset-name">${preset.name}</span>`;
+      card.appendChild(createFilterSummary(preset.tag));
+      
+      if (canDelete) {
+        const del = document.createElement("i");
+        del.className = "fa-solid fa-trash-can preset-delete-btn";
+        del.onclick = (e) => {
+          e.stopPropagation();
+          window.ScratchSwipe.showConfirm(`Remove "${preset.name}" preset?`, () => {
+            let up = JSON.parse(localStorage.getItem("scratchswipe_presets") || "[]");
+            up.splice(index, 1);
+            localStorage.setItem("scratchswipe_presets", JSON.stringify(up));
+            selectedPresets.delete(preset.tag);
+            renderPresetsView();
+          });
+        };
+        card.appendChild(del);
+      }
+      
+      card.onclick = () => {
+        if (selectedPresets.has(preset.tag)) {
+          selectedPresets.delete(preset.tag);
+          card.classList.remove("selected");
+        } else {
+          selectedPresets.add(preset.tag);
+          card.classList.add("selected");
+        }
+      };
+      return card;
+    }
+    
+    viewToggle.onclick = () => {
+      setView(modal.dataset.view === "builder" ? "presets" : "builder");
+    };
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add("visible"));
+
+    function close() {
+      overlay.classList.remove("visible");
+      setTimeout(() => overlay.remove(), 260);
+    }
+    modal.querySelector("#fp-close").onclick = close;
+    modal.querySelector(".btn-cancel").onclick = close;
+    modal.querySelector(".btn-apply").onclick = () => {
+      if (modal.dataset.view === "presets") {
+        if (selectedPresets.size === 0) {
+          window.ScratchSwipe.showToast("Select at least one preset");
+          return;
+        }
+        const combined = Array.from(selectedPresets).join(" ");
+        builder.value = combined;
+        setView("builder");
+      } else {
+        onApply(builder.value);
+        close();
+      }
+    };
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+    document.addEventListener("keydown", function h(e) {
+      if (e.key === "Escape" && overlay.classList.contains("visible")) {
+        close();
+        document.removeEventListener("keydown", h);
+      }
+    });
+  }
+
+  function createFilterBuilder(initialValue, onChange) {
+    const container = document.createElement("div");
+    container.className = "filter-builder";
+    let groups = [];
+    function parse(val) {
+      const parsed = window.ScratchSwipe.parseFilterTags(val);
+      groups = [];
+      parsed.required.forEach((obj) =>
+        groups.push({ type: "required", tags: [...obj.terms] }),
+      );
+      parsed.optional.forEach((obj) =>
+        groups.push({ type: "optional", tags: [...obj.terms] }),
+      );
+      parsed.exclude.forEach((obj) =>
+        groups.push({ type: "exclude", tags: [...obj.terms] }),
+      );
+    }
+    function toString() {
+      return groups
+        .map((g) => {
+          if (!g.tags.length) return "";
+          let s = g.tags.join("|");
+          if (g.tags.length > 1) s = "{" + s + "}";
+          if (g.type === "required") s = "+" + s;
+          else if (g.type === "exclude") s = "-" + s;
+          return s;
+        })
+        .filter(Boolean)
+        .join(" ");
+    }
+    function render() {
+      container.innerHTML = "";
+      groups.forEach((group, groupIdx) => {
+        const groupEl = document.createElement("div");
+        groupEl.className = "fb-group";
+        const header = document.createElement("div");
+        header.className = "fb-group-header";
+        const typeWrap = document.createElement("div");
+        typeWrap.className = "fb-group-type";
+        
+        const reqBtn = document.createElement("div");
+        reqBtn.className = "fb-group-type-btn" + (group.type === "required" ? " active required" : "");
+        reqBtn.textContent = "Must Have";
+        reqBtn.onclick = () => {
+          group.type = "required";
+          render();
+          if (onChange) onChange();
+        };
+
+        const optBtn = document.createElement("div");
+        optBtn.className = "fb-group-type-btn" + (group.type === "optional" ? " active" : "");
+        optBtn.textContent = "Optional";
+        optBtn.onclick = () => {
+          group.type = "optional";
+          render();
+          if (onChange) onChange();
+        };
+
+        const excBtn = document.createElement("div");
+        excBtn.className = "fb-group-type-btn" + (group.type === "exclude" ? " active exclude" : "");
+        excBtn.textContent = "Exclude";
+        excBtn.onclick = () => {
+          group.type = "exclude";
+          render();
+          if (onChange) onChange();
+        };
+
+        typeWrap.appendChild(reqBtn);
+        typeWrap.appendChild(optBtn);
+        typeWrap.appendChild(excBtn);
+
+        const delBtn = document.createElement("i");
+        delBtn.className = "fa-solid fa-trash fb-group-delete";
+        delBtn.onclick = () => {
+          groups.splice(groupIdx, 1);
+          render();
+          if (onChange) onChange();
+        };
+        header.appendChild(typeWrap);
+        header.appendChild(delBtn);
+        const tagList = document.createElement("div");
+        tagList.className = "fb-tag-list";
+        group.tags.forEach((tag, tagIdx) => {
+          const pill = document.createElement("div");
+          pill.className = "fb-tag";
+          pill.innerHTML = `<span>${tag}</span><i class="fa-solid fa-xmark fb-tag-remove"></i>`;
+          pill.querySelector(".fb-tag-remove").onclick = () => {
+            group.tags.splice(tagIdx, 1);
+            if (group.tags.length === 0) groups.splice(groupIdx, 1);
+            render();
+            if (onChange) onChange();
+          };
+          tagList.appendChild(pill);
+        });
+        const addWrap = document.createElement("div");
+        addWrap.className = "fb-tag-add-wrap";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "fb-tag-add-input";
+        input.placeholder = "Add tag\u2026";
+        input.onkeydown = (e) => {
+          if (e.key === "Enter") {
+            const val = input.value.trim().toLowerCase();
+            if (val) {
+              if (!group.tags.includes(val)) {
+                group.tags.push(val);
+                render();
+                // Find the new input for this group and focus it
+                const allInputs = container.querySelectorAll(".fb-tag-add-input");
+                const newInput = allInputs[groupIdx];
+                if (newInput) {
+                  newInput.focus();
+                }
+                if (onChange) onChange();
+              } else {
+                input.value = "";
+              }
+            }
+          }
+        };
+        addWrap.appendChild(input);
+        tagList.appendChild(addWrap);
+        groupEl.appendChild(header);
+        groupEl.appendChild(tagList);
+        container.appendChild(groupEl);
+      });
+      const addGroupBtn = document.createElement("div");
+      addGroupBtn.className = "fb-builder-add-btn";
+      addGroupBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Filter Group';
+      addGroupBtn.onclick = () => {
+        groups.push({ type: "required", tags: [] });
+        render();
+        setTimeout(() => {
+          const inputs = container.querySelectorAll(".fb-tag-add-input");
+          if (inputs.length) inputs[inputs.length - 1].focus();
+        }, 10);
+      };
+      container.appendChild(addGroupBtn);
+    }
+    parse(initialValue);
+    render();
+    container.getValue = toString;
+    container.setValue = (val) => {
+      parse(val);
+      render();
+    };
+    Object.defineProperty(container, "value", {
+      get: toString,
+      set: (val) => {
+        parse(val);
+        render();
+      },
+    });
+    return container;
+  }
 
   /* ----------------------------------------------------------
      Refresh Blocker & Swipe to Close
@@ -631,26 +1079,28 @@
     let currentY = 0;
     let isDragging = false;
     const threshold = 100;
+    let detailsSection = null;
+    let blocker = null;
 
     // Use a capturing listener for touchstart to catch it before scroll starts
     document.addEventListener("touchstart", function(e) {
-      const ds = document.querySelector(".details-section.open");
-      if (!ds) return;
-      if (ds.contains(e.target)) {
+      if (!detailsSection) detailsSection = document.querySelector(".details-section");
+      if (!detailsSection || !detailsSection.classList.contains("open")) return;
+      
+      if (detailsSection.contains(e.target)) {
         startY = e.touches[0].clientY;
         currentY = startY;
       }
     }, { passive: true, capture: true });
 
     document.addEventListener("touchmove", function(e) {
-      const ds = document.querySelector(".details-section.open");
-      if (!ds) { isDragging = false; return; }
+      if (!detailsSection || !detailsSection.classList.contains("open")) { isDragging = false; return; }
       
       const touchY = e.touches[0].clientY;
       const diff = touchY - startY;
 
       // START DRAGGING condition: at the top of scroll and moving down
-      if (!isDragging && ds.scrollTop <= 0 && diff > 5 && ds.contains(e.target)) {
+      if (!isDragging && detailsSection.scrollTop <= 0 && diff > 5 && detailsSection.contains(e.target)) {
         isDragging = true;
         startY = touchY; // Reset to avoid jump
       }
@@ -662,35 +1112,34 @@
         if (currentDiff > 0) {
           // BLOCK browser overscroll/refresh
           if (e.cancelable) e.preventDefault();
-          ds.style.transition = "none";
-          ds.style.transform = `translateY(${currentDiff}px)`;
+          detailsSection.style.transition = "none";
+          detailsSection.style.transform = `translateY(${currentDiff}px)`;
           
           // Reposition blocker to bottom
-          const blocker = document.querySelector(".refresh-blocker");
+          if (!blocker) blocker = document.querySelector(".refresh-blocker");
           if (blocker && blocker.scrollTop < 100) blocker.scrollTop = 200;
         } else {
           // If they swipe back up past the start point, stop dragging and allow scrolling
           isDragging = false;
-          ds.style.transition = "";
-          ds.style.transform = "";
+          detailsSection.style.transition = "";
+          detailsSection.style.transform = "";
         }
       }
     }, { passive: false });
 
     function handleEnd() {
       if (!isDragging) return;
-      const ds = document.querySelector(".details-section.open");
-      if (ds) {
+      if (detailsSection && detailsSection.classList.contains("open")) {
         const diff = currentY - startY;
-        ds.style.transition = ""; // Restore transition for snap
+        detailsSection.style.transition = ""; // Restore transition for snap
         if (diff > threshold) {
-          ds.classList.remove("open");
-          ds.style.transform = "";
+          detailsSection.classList.remove("open");
+          detailsSection.style.transform = "";
         } else {
-          ds.style.transform = "translateY(0%)";
+          detailsSection.style.transform = "translateY(0%)";
           // Cleanup inline style after snap animation
           setTimeout(() => {
-            if (ds.classList.contains("open")) ds.style.transform = "";
+            if (detailsSection.classList.contains("open")) detailsSection.style.transform = "";
           }, 400);
         }
       }

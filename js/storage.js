@@ -3,7 +3,7 @@
   window.ScratchSwipe = window.ScratchSwipe || {};
 
   const DEFAULTS = {
-    discover: { country: "All", filterTags: "", exclude: "" },
+    discover: { country: "All", filterTags: "", filterTagsEnabled: true },
     appearance: { ambientBackground: true, entryAnimations: true },
     advanced: { lazyLoading: true, preloadCount: 8 },
   };
@@ -28,14 +28,20 @@
     } catch (_) {}
   }
 
-  function isUserLiked(username) {
+  let _likedCache = null;
+  function getLikedSet() {
+    if (_likedCache) return _likedCache;
     try {
-      return JSON.parse(
-        localStorage.getItem("scratchswipe_liked") || "[]",
-      ).some((l) => l.username === username);
-    } catch (_) {
-      return false;
+      const liked = JSON.parse(localStorage.getItem("scratchswipe_liked") || "[]");
+      _likedCache = new Set(liked.map(u => u.username));
+    } catch(_) {
+      _likedCache = new Set();
     }
+    return _likedCache;
+  }
+
+  function isUserLiked(username) {
+    return getLikedSet().has(username);
   }
 
   function toggleUserLike(user) {
@@ -43,16 +49,20 @@
       let liked = JSON.parse(
         localStorage.getItem("scratchswipe_liked") || "[]",
       );
+      const set = getLikedSet();
       const idx = liked.findIndex((l) => l.username === user.username);
       if (idx !== -1) {
         liked.splice(idx, 1);
+        set.delete(user.username);
       } else {
-        liked.unshift({
+        const u = {
           username: user.username,
           profile_pic: user.profile_pic,
           country: user.country,
           joined: user.joined,
-        });
+        };
+        liked.unshift(u);
+        set.add(user.username);
       }
       localStorage.setItem("scratchswipe_liked", JSON.stringify(liked));
       return idx === -1;
@@ -94,6 +104,24 @@
       d.filterTags = parts.join(" ");
       delete d.mustInclude;
       delete d.includeAny;
+      saveSettings("discover", d);
+    }
+    if (d.exclude) {
+      var excTerms = d.exclude
+        .split(",")
+        .map(function (t) {
+          return t.trim();
+        })
+        .filter(Boolean);
+      if (excTerms.length > 0) {
+        var excStr = excTerms
+          .map(function (t) {
+            return "-" + t;
+          })
+          .join(" ");
+        d.filterTags = (d.filterTags ? d.filterTags + " " : "") + excStr;
+      }
+      delete d.exclude;
       saveSettings("discover", d);
     }
   }

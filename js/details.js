@@ -5,6 +5,8 @@
   let _detailsPanelUser = null;
   let _translationCache = { username: null, translated: null };
 
+  let _detailsEls = {};
+
   function injectDetailsSection() {
     const app = document.querySelector(".app");
     if (!app || app.querySelector(".details-section")) return;
@@ -27,6 +29,41 @@
       '<div class="country-container"><i class="fa-solid fa-location-dot icon"></i><p class="country"></p></div>' +
       "</div></div>";
     app.appendChild(ds);
+
+    // Cache elements
+    _detailsEls = {
+      pfp: ds.querySelector(".profile-header .profile-picture"),
+      name: ds.querySelector(".profile-header .name-text"),
+      chips: ds.querySelector(".profile-header .chip-container"),
+      bio: ds.querySelector(".bio"),
+      headerRow: ds.querySelector(".about-me-header-row"),
+      profileLink: ds.querySelector(".profile-link"),
+      id: ds.querySelector(".id-container .id"),
+      joinDate: ds.querySelector(".join-date"),
+      country: ds.querySelector(".country-container .country"),
+      heartBtn: ds.querySelector(".like-heart-btn"),
+    };
+
+    // Global listeners for cached elements
+    if (_detailsEls.pfp) {
+      _detailsEls.pfp.addEventListener("click", () => {
+        if (_detailsPanelUser) {
+          const pfpSrc = (_detailsPanelUser.profile_pic || "").replace(/_\d+x\d+/, "_200x200");
+          window.ScratchSwipe.openPfpViewer(pfpSrc, _detailsPanelUser.username);
+        }
+      });
+    }
+
+    if (_detailsEls.heartBtn) {
+      _detailsEls.heartBtn.addEventListener("click", () => {
+        const u = _detailsPanelUser;
+        if (!u) return;
+        const nowLiked = window.ScratchSwipe.toggleUserLike(u);
+        _detailsEls.heartBtn.className = nowLiked
+          ? "fa-solid fa-heart like-heart-btn liked"
+          : "fa-regular fa-heart like-heart-btn";
+      });
+    }
   }
 
   function populateDetailsPanel(detailsSection, user) {
@@ -35,44 +72,34 @@
     if (_translationCache.username !== user.username) {
       _translationCache = { username: user.username, translated: null };
     }
+
+    const els = _detailsEls;
     const pfpSrc = (user.profile_pic || "").replace(/_\d+x\d+/, "_200x200");
-    const pfp = detailsSection.querySelector(
-      ".profile-header .profile-picture",
-    );
-    const nameEl = detailsSection.querySelector(".profile-header .name-text");
-    const chips = detailsSection.querySelector(
-      ".profile-header .chip-container",
-    );
-    if (pfp) {
-      pfp.src = pfpSrc;
-      pfp.alt = user.username;
-      const freshPfp = pfp.cloneNode(true);
-      pfp.parentNode.replaceChild(freshPfp, pfp);
-      freshPfp.addEventListener("click", () =>
-        window.ScratchSwipe.openPfpViewer(pfpSrc, user.username),
-      );
+    
+    if (els.pfp) {
+      els.pfp.src = pfpSrc;
+      els.pfp.alt = user.username;
     }
-    if (nameEl) nameEl.textContent = user.username;
-    if (chips)
-      chips.innerHTML =
+    if (els.name) els.name.textContent = user.username;
+    if (els.chips)
+      els.chips.innerHTML =
         '<div class="chip-info">' +
         user.followers_count +
         " followers</div><div class=\"chip-info\">" +
         user.following_count +
         " following</div>";
-    const bioEl = detailsSection.querySelector(".bio");
+    
     const originalBio = user.bio || "";
-    if (bioEl) {
-      bioEl.textContent = originalBio;
-      bioEl._originalBio = originalBio;
-      bioEl._isTranslated = false;
-      window.ScratchSwipe.applyBioToggle(bioEl);
+    if (els.bio) {
+      els.bio.textContent = originalBio;
+      els.bio._originalBio = originalBio;
+      els.bio._isTranslated = false;
+      window.ScratchSwipe.applyBioToggle(els.bio);
     }
 
     /* ── Translate button ── */
-    var headerRow = detailsSection.querySelector(".about-me-header-row");
-    if (headerRow) {
-      var existingBtn = headerRow.querySelector(".translate-bio-btn");
+    if (els.headerRow) {
+      var existingBtn = els.headerRow.querySelector(".translate-bio-btn");
       if (existingBtn) existingBtn.remove();
 
       if (window.ScratchSwipe.isLikelyNonEnglish(originalBio) && originalBio.length >= 10) {
@@ -82,6 +109,7 @@
         translateBtn.innerHTML =
           '<i class="fa-solid fa-language"></i>';
         translateBtn.addEventListener("click", function () {
+          const bioEl = els.bio;
           if (bioEl._isTranslated) {
             bioEl.textContent = bioEl._originalBio;
             bioEl._isTranslated = false;
@@ -125,39 +153,25 @@
               window.ScratchSwipe.showToast("Translation failed");
             });
         });
-        headerRow.appendChild(translateBtn);
+        els.headerRow.appendChild(translateBtn);
       }
     }
 
-    const profileLink = detailsSection.querySelector(".profile-link");
-    if (profileLink) {
-      profileLink.textContent = "@" + user.username;
-      profileLink.href =
+    if (els.profileLink) {
+      els.profileLink.textContent = "@" + user.username;
+      els.profileLink.href =
         "https://scratch.mit.edu/users/" + user.username + "/";
     }
-    const idEl = detailsSection.querySelector(".id-container .id");
-    if (idEl) idEl.textContent = user.id || "";
-    const joinDateEl = detailsSection.querySelector(".join-date");
-    if (joinDateEl)
-      joinDateEl.textContent = "Joined " + window.ScratchSwipe.formatJoinDate(user.joined);
-    const countryEl = detailsSection.querySelector(
-      ".country-container .country",
-    );
-    if (countryEl) countryEl.textContent = user.country || "Unknown";
-    const heartBtn = detailsSection.querySelector(".like-heart-btn");
-    if (heartBtn) {
-      const fresh = heartBtn.cloneNode(true);
-      heartBtn.parentNode.replaceChild(fresh, heartBtn);
+    if (els.id) els.id.textContent = user.id || "";
+    if (els.joinDate)
+      els.joinDate.textContent = "Joined " + window.ScratchSwipe.formatJoinDate(user.joined);
+    if (els.country) els.country.textContent = user.country || "Unknown";
+    
+    if (els.heartBtn) {
       if (window.ScratchSwipe.isUserLiked(user.username))
-        fresh.className = "fa-solid fa-heart like-heart-btn liked";
-      fresh.addEventListener("click", () => {
-        const u = _detailsPanelUser;
-        if (!u) return;
-        const nowLiked = window.ScratchSwipe.toggleUserLike(u);
-        fresh.className = nowLiked
-          ? "fa-solid fa-heart like-heart-btn liked"
-          : "fa-regular fa-heart like-heart-btn";
-      });
+        els.heartBtn.className = "fa-solid fa-heart like-heart-btn liked";
+      else
+        els.heartBtn.className = "fa-regular fa-heart like-heart-btn";
     }
   }
 

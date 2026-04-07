@@ -68,11 +68,13 @@
     }
 
     const app = document.querySelector(".app");
+    let detailsSectionCached = null;
     if (app) {
       app.addEventListener("click", function (e) {
         if (e.target.closest(".settings-overlay") || e.target.closest(".presets-overlay") || e.target.closest(".confirm-overlay") || e.target.closest(".pfp-overlay")) return;
         if (e.target.closest(".dating-card") || e.target.closest(".liked-grid-item") || e.target.closest(".leaderboard-search-result")) return;
-        var ds = document.querySelector(".details-section");
+        if (!detailsSectionCached) detailsSectionCached = document.querySelector(".details-section");
+        var ds = detailsSectionCached;
         if (ds && ds.classList.contains("open") && !ds.contains(e.target)) {
           ds.classList.remove("open");
         }

@@ -3,9 +3,6 @@
   window.ScratchSwipe = window.ScratchSwipe || {};
 
   let _settingsModalCreated = false,
-    _countrySelectRef = null,
-    _filterTagsRef = null,
-    _excludeInputRef = null,
     _toggleRefs = {};
 
   function createSettingsModal() {
@@ -18,22 +15,10 @@
     overlay.innerHTML =
       '<div class="settings-modal">' +
       '<div class="settings-modal-header"><h3>Settings</h3><button class="close-settings" aria-label="Close settings"><i class="fa-solid fa-xmark"></i></button></div>' +
-      '<div class="settings-tabs"><div class="settings-tab active" data-tab="discover">Discover</div><div class="settings-tab" data-tab="appearance">Appearance</div><div class="settings-tab" data-tab="advanced">Advanced</div></div>' +
-      '<div class="settings-tab-content active" data-tab="discover">' +
-      '<div class="discover-loading" id="discover-tab-loading">Loading options\u2026</div>' +
-      '<div id="discover-tab-fields" style="display:none; flex-direction:column; gap:14px;">' +
-      '<div><label class="field-label">Country</label><div id="settings-country-wrap" style="margin-top:6px;"></div></div>' +
-      '<div>' +
-      '<div style="display:flex; align-items:center; justify-content:space-between;"><label class="field-label">Filter Tags</label><span class="view-presets-link" id="view-presets-link"><i class="fa-solid fa-bookmark"></i> View presets</span></div>' +
-      '<input type="text" id="filter-tags" placeholder=\'e.g. +{anime|art} +music\' autocomplete="off" style="margin-top:6px;">' +
-      '<p class="setting-desc" style="margin-top:4px; line-height:1.5;">+tag = required \u00b7 {a|b} = optional group \u00b7 +{a|b} = required group</p>' +
-      "</div>" +
-      '<div><label class="field-label">Exclude Tags (comma separated)</label><input type="text" id="filter-exclude" placeholder="e.g. f4f, spam" autocomplete="off" style="margin-top:6px;"></div>' +
-      '<div class="settings-btn-group"><button class="btn-clear" id="filter-clear">Clear All</button><button class="btn-apply" id="filter-apply">Apply Filters</button></div>' +
-      '<p class="settings-note" id="discover-note"></p>' +
-      "</div></div>" +
-      '<div class="settings-tab-content" data-tab="appearance">' +
+      '<div class="settings-tabs"><div class="settings-tab active" data-tab="appearance">Appearance</div><div class="settings-tab" data-tab="advanced">Advanced</div></div>' +
+      '<div class="settings-tab-content active" data-tab="appearance">' +
       '<div class="setting-row"><div class="setting-info"><span class="setting-label">Zoom Level</span><span class="setting-desc">Scale the entire app interface</span></div><div class="zoom-stepper" id="zoom-stepper"><button class="zoom-stepper-btn" id="zoom-decrease"><i class="fa-solid fa-minus"></i></button><div class="zoom-stepper-value" id="zoom-value">100%</div><button class="zoom-stepper-btn" id="zoom-increase"><i class="fa-solid fa-plus"></i></button></div></div>' +
+      '<div class="setting-row"><div class="setting-info"><span class="setting-label">Card Blur</span><span class="setting-desc">Frosted glass blur effect on card overlay</span></div><div id="toggle-card-blur"></div></div>' +
       '<div class="setting-row"><div class="setting-info"><span class="setting-label">Ambient Background</span><span class="setting-desc">Blurred colour glow behind cards</span></div><div id="toggle-ambient"></div></div>' +
       '<div class="setting-row"><div class="setting-info"><span class="setting-label">Entry Animations</span><span class="setting-desc">Slide-up animation for new results</span></div><div id="toggle-entry-anim"></div></div>' +
       "</div>" +
@@ -55,34 +40,29 @@
         overlay
           .querySelector('.settings-tab-content[data-tab="' + target + '"]')
           .classList.add("active");
-        if (target === "discover" && !overlay.querySelector(".custom-select"))
-          populateDiscoverTab();
       });
     });
 
     function closeSettings() {
       overlay.classList.remove("visible");
     }
-    overlay
-      .querySelector(".close-settings")
-      .addEventListener("click", closeSettings);
+
+    overlay.querySelector(".close-settings").addEventListener("click", closeSettings);
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) closeSettings();
     });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && overlay.classList.contains("visible"))
-        closeSettings();
-    });
-
-    /* View presets link */
-    overlay
-      .querySelector("#view-presets-link")
-      .addEventListener("click", function () {
-        var ftInput = overlay.querySelector("#filter-tags");
-        window.ScratchSwipe.openPresetsPopup(ftInput);
-      });
 
     const as = window.ScratchSwipe.settings.appearance;
+    const cbt = window.ScratchSwipe.createToggleSwitch(as.cardBlur !== false, (val) => {
+      window.ScratchSwipe.settings.appearance.cardBlur = val;
+      window.ScratchSwipe.saveSettings(
+        "appearance",
+        window.ScratchSwipe.settings.appearance,
+      );
+      applyAppearanceSetting("cardBlur", val);
+    });
+    document.getElementById("toggle-card-blur").appendChild(cbt);
+    _toggleRefs.cardBlur = cbt;
     const at = window.ScratchSwipe.createToggleSwitch(as.ambientBackground, (val) => {
       window.ScratchSwipe.settings.appearance.ambientBackground = val;
       window.ScratchSwipe.saveSettings(
@@ -115,8 +95,7 @@
         valEl.textContent = Math.round(level * 100) + "%";
         decBtn.disabled = level <= MIN;
         incBtn.disabled = level >= MAX;
-        var app = document.querySelector(".app");
-        if (app) app.style.zoom = level;
+        document.body.style.zoom = level;
         try { localStorage.setItem(ZOOM_KEY, String(level)); } catch(_) {}
       }
       decBtn.addEventListener("click", function () {
@@ -188,13 +167,11 @@
               ...window.ScratchSwipe.DEFAULTS.appearance,
             };
             window.ScratchSwipe.settings.advanced = { ...window.ScratchSwipe.DEFAULTS.advanced };
+            _toggleRefs.cardBlur.setChecked(true);
             _toggleRefs.ambient.setChecked(true);
             _toggleRefs.entryAnimations.setChecked(true);
             _toggleRefs.lazyLoading.setChecked(true);
             pi.value = 8;
-            if (_countrySelectRef) _countrySelectRef.setValue("All");
-            if (_filterTagsRef) _filterTagsRef.value = "";
-            if (_excludeInputRef) _excludeInputRef.value = "";
             applyAllAppearanceSettings();
             window.ScratchSwipe.showToast("Settings reset to defaults");
           },
@@ -207,94 +184,24 @@
         openSettingsModal();
       }
     });
-    overlay.querySelector("#filter-clear").addEventListener("click", () => {
-      if (_countrySelectRef) _countrySelectRef.setValue("All");
-      if (_filterTagsRef) _filterTagsRef.value = "";
-      if (_excludeInputRef) _excludeInputRef.value = "";
-    });
-    overlay.querySelector("#filter-apply").addEventListener("click", () => {
-      const filters = {
-        country: _countrySelectRef ? _countrySelectRef.getValue() : "All",
-        filterTags: _filterTagsRef ? _filterTagsRef.value.trim() : "",
-        exclude: _excludeInputRef ? _excludeInputRef.value.trim() : "",
-      };
-      window.ScratchSwipe.settings.discover = filters;
-      window.ScratchSwipe.saveSettings("discover", filters);
-      closeSettings();
-      var isDiscoverResults =
-        new URLSearchParams(window.location.search).get("from") === "search";
-      if (
-        !!document.querySelector(".dating-content") &&
-        !isDiscoverResults
-      ) {
-        document.dispatchEvent(
-          new CustomEvent("scratchswipe:filters-changed", {
-            detail: filters,
-          }),
-        );
-        window.ScratchSwipe.showToast("Filters applied");
-      } else {
-        window.ScratchSwipe.showToast("Filters saved for Discover");
-      }
-    });
-
-    if (window.ScratchSwipe._dbCache) populateDiscoverTab();
-  }
-
-  async function populateDiscoverTab() {
-    const loading = document.getElementById("discover-tab-loading"),
-      fields = document.getElementById("discover-tab-fields");
-    if (!loading || !fields || fields.querySelector(".custom-select")) return;
-    try {
-      const db = await window.ScratchSwipe.loadDatabase();
-      const uniqueCountries = [
-        ...new Set(
-          Object.values(db)
-            .map((u) => u.country)
-            .filter(Boolean),
-        ),
-      ].sort();
-      const opts = [{ value: "All", label: "All Everywhere" }].concat(
-        uniqueCountries.map((c) => ({ value: c, label: c })),
-      );
-      const cf = window.ScratchSwipe.settings.discover;
-      const wrap = document.getElementById("settings-country-wrap");
-      wrap.innerHTML = "";
-      const sel = window.ScratchSwipe.createCustomSelect(opts, cf.country, () => {});
-      wrap.appendChild(sel);
-      _countrySelectRef = sel;
-      _filterTagsRef = document.getElementById("filter-tags");
-      _excludeInputRef = document.getElementById("filter-exclude");
-      _filterTagsRef.value = cf.filterTags || "";
-      _excludeInputRef.value = cf.exclude || "";
-      loading.style.display = "none";
-      fields.style.display = "flex";
-    } catch (_) {
-      loading.textContent = "Failed to load options";
-    }
-  }
-
-  function getDiscoverNoteText() {
-    var isDiscoverResults =
-      new URLSearchParams(window.location.search).get("from") === "search";
-    var onDiscover = !!document.querySelector(".dating-content");
-    if (isDiscoverResults) return "Filters will apply when you visit Discover";
-    if (onDiscover) return "Filters apply to the current page";
-    return "Filters will apply when you visit Discover";
   }
 
   function openSettingsModal() {
     const overlay = document.querySelector(".settings-overlay");
     if (!overlay) return;
     overlay.classList.add("visible");
-    if (!overlay.querySelector(".custom-select")) populateDiscoverTab();
-    const note = overlay.querySelector("#discover-note");
-    if (note) note.textContent = getDiscoverNoteText();
   }
 
   function applyAppearanceSetting(key, value) {
     const app = document.querySelector(".app");
     if (!app) return;
+    if (key === "cardBlur") {
+      if (value === false) {
+        app.classList.add("card-blur-off");
+      } else {
+        app.classList.remove("card-blur-off");
+      }
+    }
     if (key === "ambientBackground") {
       if (value) {
         app.classList.remove("ambient-off");
@@ -315,6 +222,7 @@
 
   function applyAllAppearanceSettings() {
     const s = window.ScratchSwipe.settings.appearance;
+    applyAppearanceSetting("cardBlur", s.cardBlur !== false);
     applyAppearanceSetting("ambientBackground", s.ambientBackground !== false);
     applyAppearanceSetting("entryAnimations", s.entryAnimations !== false);
   }

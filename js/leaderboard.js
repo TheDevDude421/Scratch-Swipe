@@ -11,7 +11,106 @@
       "Fetching leaderboard data from the database",
     );
     var db = await window.ScratchSwipe.loadDatabase();
-    var users = Object.values(db);
+    var users = window.ScratchSwipe.getDBValues();
+
+    const LEADERBOARD_FILTERS_KEY = "scratchswipe_leaderboard_filters";
+    var countryFilter = "All";
+    try {
+      var saved = JSON.parse(sessionStorage.getItem(LEADERBOARD_FILTERS_KEY) || "{}");
+      countryFilter = saved.country || "All";
+    } catch (_) {}
+
+    var countrySelect = null;
+    var filterBtn = document.getElementById("leaderboard-filter-btn");
+    var popover = document.createElement("div");
+        if (filterBtn && countryFilter !== "All") {
+      filterBtn.classList.add("has-active-filters");
+    }
+    
+    popover.className = "search-filter-popover";
+    popover.innerHTML =
+      '<div style="margin-top:0px;">' +
+      '<p class="sf-label">Country</p>' +
+      '<div id="leaderboard-country-wrap" style="margin-top:6px;"></div>' +
+      '</div>' +
+      '<div class="settings-btn-group" style="margin-top:10px;">' +
+      '<button class="btn-clear" id="lf-clear">Clear</button>' +
+      '<button class="btn-apply" id="lf-apply">Apply</button>' +
+      '</div>';
+
+    var topbar = document.querySelector(".topbar");
+    if (topbar) {
+      topbar.style.position = "relative";
+      topbar.appendChild(popover);
+    }
+
+    // Prevent clicks inside the popover from bubbling to the document
+    popover.addEventListener("click", function (e) {
+      e.stopPropagation();
+    });
+    popover.addEventListener("mousedown", function (e) {
+      e.stopPropagation();
+    });
+
+    function togglePopover(open) {
+      if (open) popover.classList.add("open");
+      else popover.classList.remove("open");
+    }
+
+    if (filterBtn) {
+      filterBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        togglePopover(!popover.classList.contains("open"));
+      });
+    }
+
+    document.addEventListener("click", function (e) {
+      var isInsidePopover = e.target.closest(".search-filter-popover");
+      var isCustomSelect = e.target.closest(".custom-select") || e.target.closest(".custom-select-dropdown");
+      var isFilterBtn = e.target === filterBtn || e.target.closest("#leaderboard-filter-btn");
+      
+      if (!isInsidePopover && !isCustomSelect && !isFilterBtn) {
+        togglePopover(false);
+      }
+    });
+
+    function saveFilters() {
+      sessionStorage.setItem(LEADERBOARD_FILTERS_KEY, JSON.stringify({
+        country: countryFilter
+      }));
+    }
+
+    function applyFilters() {
+      if (countrySelect) countryFilter = countrySelect.getValue();
+        if (filterBtn) filterBtn.classList.toggle("has-active-filters", countryFilter !== "All");
+      saveFilters();
+      togglePopover(false);
+      switchTab(tabs.find(t => t.classList.contains("selected")), true);
+    }
+
+    popover.querySelector("#lf-clear").addEventListener("click", function () {
+      countryFilter = "All";
+      if (countrySelect) countrySelect.setValue("All");
+      if (filterBtn) filterBtn.classList.remove("has-active-filters");
+      saveFilters();
+      togglePopover(false);
+      switchTab(tabs.find(t => t.classList.contains("selected")), true);
+    });
+
+    popover.querySelector("#lf-apply").addEventListener("click", applyFilters);
+
+    (function initCountryFilter() {
+      const uniqueCountries = [
+        ...new Set(users.map((u) => u.country).filter(Boolean)),
+      ].sort();
+      const opts = [{ value: "All", label: "All Everywhere" }].concat(
+        uniqueCountries.map((c) => ({ value: c, label: c })),
+      );
+      const wrap = popover.querySelector("#leaderboard-country-wrap");
+      countrySelect = window.ScratchSwipe.createCustomSelect(opts, countryFilter, () => {});
+      wrap.appendChild(countrySelect);
+    })();
+
     var detailsSection = document.querySelector(".details-section");
     var tabMap = {
         "Most Followed": "followers_count",
@@ -201,6 +300,7 @@
     }
     var activeTabLabel = urlTab || "Most Followed";
     function switchTab(tabEl, skipURL) {
+      if (!tabEl) return;
       tabs.forEach(function (t) {
         t.classList.remove("selected");
       });
@@ -208,7 +308,15 @@
       activeTabLabel = tabEl.textContent.trim();
       activeKey = tabMap[activeTabLabel] || "followers_count";
       activeSuffix = tabSuffix[activeTabLabel] || "followers";
-      sortedUsers = users.slice().sort(function (a, b) {
+
+      var filtered = users;
+      if (countryFilter !== "All") {
+        filtered = users.filter(function (u) {
+          return u.country === countryFilter;
+        });
+      }
+
+      sortedUsers = filtered.slice().sort(function (a, b) {
         return (b[activeKey] || 0) - (a[activeKey] || 0);
       });
       if (!skipURL) {

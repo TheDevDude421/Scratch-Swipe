@@ -3,10 +3,10 @@
   window.ScratchSwipe = window.ScratchSwipe || {};
 
   var DEFAULT_PRESETS = [
-    { name: "Only Females", tag: "+{female|woman|girl|lady|she|her|she/her|her/she|herself|queen}" },
-    { name: "Only Males", tag: "+{male|man|boy|gentleman|guy|he|him|he/him|him/he|himself}" },
-    { name: "Only Christian", tag: "+{Christian|Christ|Faith|Jesus|Jesus Follower|Follower of Christ|Man of God|Woman of God|God|Bible|Church|Believer}" },
-    { name: "Only Hindhu", tag: "+{Hindu|Vishnu|Shiva|Krishna|Rama|Ganesh|Hanuman|Lakshmi|Saraswati|Durga|Kali|Parvati|Indra|Sanatan|Sanatani|Dharma|Dharma Follower|Spiritual|Karma|Reincarnation|Atman|Moksha|Brahma|}" },
+    { name: "Only Females", tag: "+{female|woman|girl|lady|she|her|she/her|her/she|herself|queen} -{male|man|boy|guy|he/him|him/he|himself}" },
+    { name: "Only Males", tag: "+{male|man|boy|gentleman|guy|he|him|he/him|him/he|himself} -{female|woman|girl|lady|she/her|her/she|herself}" },
+    { name: "Only Christian", tag: "+{christian|christ|jesus|follower of christ|man of god|woman of god|bible|church|believer} {faith|jesus follower|god}" },
+    { name: "Only Hindu", tag: "+{hindu|sanatan|sanatani|dharma|dharma follower} {vishnu|shiva|krishna|rama|ganesh|hanuman|lakshmi|saraswati|durga|kali|parvati|indra|brahma|moksha|karma|spiritual}" },
   ];
 
   function openPresetsPopup(filterTagsInput) {
@@ -61,11 +61,11 @@
       var nameEl = document.createElement("span");
       nameEl.className = "preset-name";
       nameEl.textContent = preset.name;
-      var tagEl = document.createElement("span");
-      tagEl.className = "preset-tag";
-      tagEl.textContent = preset.tag;
+      
+      var summaryEl = window.ScratchSwipe.createFilterSummary(preset.tag);
+      
       info.appendChild(nameEl);
-      info.appendChild(tagEl);
+      info.appendChild(summaryEl);
       item.appendChild(info);
       if (canDelete) {
         var delBtn = document.createElement("button");
@@ -92,8 +92,8 @@
         item.appendChild(delBtn);
       }
       item.addEventListener("click", function () {
-        var popupInput = overlay.querySelector(".presets-filter-input");
-        if (popupInput) popupInput.value = preset.tag;
+        currentFilterValue = preset.tag;
+        updateTriggerLabel();
         if (filterTagsInput) filterTagsInput.value = preset.tag;
         closePresets();
       });
@@ -103,19 +103,36 @@
     var stickyHeader = document.createElement("div");
     stickyHeader.className = "presets-sticky-header";
 
+    var currentFilterValue = filterTagsInput ? (filterTagsInput.value || "") : "";
+    
     var inputRow = document.createElement("div");
     inputRow.className = "presets-input-row";
-    var presetInput = document.createElement("input");
-    presetInput.type = "text";
-    presetInput.className = "presets-filter-input";
-    presetInput.placeholder = "Filter tags\u2026";
-    presetInput.value = filterTagsInput ? filterTagsInput.value : "";
-    presetInput.setAttribute("autocomplete", "off");
+    
+    const triggerBtn = document.createElement("button");
+    triggerBtn.className = "filter-trigger-btn";
+    triggerBtn.style.flex = "1";
+    
+    function updateTriggerLabel() {
+      const parsed = window.ScratchSwipe.parseFilterTags(currentFilterValue);
+      const count = parsed.required.length + parsed.optional.length + parsed.exclude.length;
+      triggerBtn.innerHTML = `<span>Edit Filter Tags</span>` + (count > 0 ? `<span class="count-badge">${count} Groups</span>` : `<i class="fa-solid fa-chevron-right" style="font-size:10px; opacity:0.5;"></i>`);
+    }
+    
+    triggerBtn.onclick = () => {
+      window.ScratchSwipe.showFilterPopup(currentFilterValue, (newTags) => {
+        currentFilterValue = newTags;
+        updateTriggerLabel();
+        if (filterTagsInput) filterTagsInput.value = newTags;
+      });
+    };
+    
+    updateTriggerLabel();
+
     var addBtn = document.createElement("button");
     addBtn.className = "presets-add-btn";
     addBtn.title = "Save as preset";
     addBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
-    inputRow.appendChild(presetInput);
+    inputRow.appendChild(triggerBtn);
     inputRow.appendChild(addBtn);
 
     var headerActions = document.createElement("div");
@@ -145,10 +162,6 @@
     requestAnimationFrame(() => overlay.classList.add("visible"));
 
     function closePresets() {
-      var popupInput = overlay.querySelector(".presets-filter-input");
-      if (popupInput && filterTagsInput) {
-        filterTagsInput.value = popupInput.value;
-      }
       overlay.classList.remove("visible");
       setTimeout(() => overlay.remove(), 220);
     }
@@ -159,9 +172,9 @@
     });
 
     addBtn.addEventListener("click", function () {
-      var tagValue = presetInput.value.trim();
+      var tagValue = currentFilterValue.trim();
       if (!tagValue) {
-        window.ScratchSwipe.showToast("Enter a filter tag first");
+        window.ScratchSwipe.showToast("Add some filter tags first");
         return;
       }
       window.ScratchSwipe.showPrompt("Name this preset", "", function (name) {

@@ -83,14 +83,28 @@
   }
 
   function bioHasWord(bio, word) {
+    if (!bio || !word) return false;
+    // Fast path: if the word isn't in the bio at all, we're done
+    const idx = bio.indexOf(word);
+    if (idx === -1) return false;
+    
+    // Check if it's a standalone word using character boundaries to avoid RegExp overhead
+    const before = idx === 0 ? " " : bio[idx - 1];
+    const after = idx + word.length === bio.length ? " " : bio[idx + word.length];
+    
+    const isAlphanumeric = /[a-zA-Z0-9]/;
+    if (!isAlphanumeric.test(before) && !isAlphanumeric.test(after)) return true;
+    
+    // Fallback only if the first occurrence wasn't a standalone word
     var escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     return new RegExp("\\b" + escaped + "\\b").test(bio);
   }
 
   function parseFilterTags(input) {
-    if (!input || !input.trim()) return { required: [], optional: [] };
+    if (!input || !input.trim()) return { required: [], optional: [], exclude: [] };
     var required = [];
     var optional = [];
+    var exclude = [];
     var tokens = [];
     var current = "";
     var inGroup = false;
@@ -113,63 +127,98 @@
     if (current.trim()) tokens.push(current.trim());
 
     tokens.forEach(function (token) {
-      var isRequired = false;
+      var type = "optional";
       if (token.startsWith("+")) {
-        isRequired = true;
+        type = "required";
+        token = token.substring(1);
+      } else if (token.startsWith("-")) {
+        type = "exclude";
         token = token.substring(1);
       }
+
       var terms = [];
-      if (token.startsWith("{") && token.endsWith("}")) {
-        terms = token
-          .slice(1, -1)
-          .split("|")
-          .map(function (t) {
-            return t.trim().toLowerCase();
-          })
-          .filter(Boolean);
-      } else if (token.includes("|")) {
-        terms = token
-          .split("|")
-          .map(function (t) {
-            return t.trim().toLowerCase();
-          })
-          .filter(Boolean);
-      } else {
-        var t = token.trim().toLowerCase();
-        if (t) terms = [t];
+      var regex = null;
+
+      // Literal Regex Support: /pattern/
+      if (token.startsWith("/") && token.lastIndexOf("/") > 0) {
+        var lastIdx = token.lastIndexOf("/");
+        var pattern = token.substring(1, lastIdx);
+        var flags = token.substring(lastIdx + 1) || "i";
+        try {
+          regex = new RegExp(pattern, flags);
+          terms = [token];
+        } catch(e) {
+          // Fallback if invalid
+          console.warn("Invalid regex:", token);
+        }
       }
-      if (!terms.length) return;
-      if (isRequired) required.push(terms);
-      else optional.push(terms);
+
+      if (!regex) {
+        if (token.startsWith("{") && token.endsWith("}")) {
+          terms = token
+            .slice(1, -1)
+            .split("|")
+            .map(function (t) { return t.trim().toLowerCase(); })
+            .filter(Boolean);
+        } else if (token.includes("|")) {
+          terms = token
+            .split("|")
+            .map(function (t) { return t.trim().toLowerCase(); })
+            .filter(Boolean);
+        } else {
+          var t = token.trim().toLowerCase();
+          if (t) terms = [t];
+        }
+
+        if (terms.length) {
+          // Use word boundaries \b to ensure "She" doesn't match "sheep"
+          var pattern = terms.map(function(t) {
+            return t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          }).join("|");
+          regex = new RegExp("\\b(" + pattern + ")\\b", "i");
+        }
+      }
+
+      if (!regex) return;
+      
+      var entry = { terms: terms, regex: regex };
+      if (type === "required") required.push(entry);
+      else if (type === "exclude") exclude.push(entry);
+      else optional.push(entry);
     });
 
-    return { required: required, optional: optional };
+    return { required: required, optional: optional, exclude: exclude };
   }
 
   function filterUserByTags(user, parsed) {
-    if (!parsed.required.length && !parsed.optional.length) return true;
-    var bio = (user.bio || "").toLowerCase();
-    for (var i = 0; i < parsed.required.length; i++) {
-      var group = parsed.required[i];
-      if (
-        !group.some(function (tag) {
-          return bioHasWord(bio, tag);
-        })
-      )
-        return false;
+    if (!parsed.required.length && !parsed.optional.length && !parsed.exclude.length) return true;
+    var bio = user.bio || "";
+    
+    // Exclude check
+    for (var i = 0; i < parsed.exclude.length; i++) {
+      if (parsed.exclude[i].regex.test(bio)) return false;
     }
+
+    // Required check
+    for (var i = 0; i < parsed.required.length; i++) {
+      if (!parsed.required[i].regex.test(bio)) return false;
+    }
+
+    // Optional check
     if (parsed.optional.length > 0) {
-      var anyMatch = parsed.optional.some(function (group) {
-        return group.some(function (tag) {
-          return bioHasWord(bio, tag);
-        });
-      });
+      var anyMatch = false;
+      for (var j = 0; j < parsed.optional.length; j++) {
+        if (parsed.optional[j].regex.test(bio)) {
+          anyMatch = true;
+          break;
+        }
+      }
       if (!anyMatch) return false;
     }
     return true;
   }
 
-  function scoreUserByQuery(user, query, filter) {
+  function scoreUserByQuery(user, query, filter, precompiledRegex) {
     var q = query.toLowerCase();
     if (!q) return 0;
     var score = 0;
@@ -180,7 +229,9 @@
       else if (n.includes(q)) score += 30;
     }
     if (filter === "Interests" || filter === "All") {
-      if ((user.bio || "").toLowerCase().includes(q)) score += 20;
+      var bio = user.bio || "";
+      var re = precompiledRegex || new RegExp("\\b" + q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+      if (re.test(bio)) score += 20;
       if (user.username.toLowerCase().includes(q)) score += 15;
     }
     if (filter === "Places" || filter === "All") {

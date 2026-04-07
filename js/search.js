@@ -23,109 +23,197 @@
       chipContainer.parentNode.removeChild(chipContainer);
     stickyControls.appendChild(chipContainer);
 
-    var filterBtn = document.createElement("button");
-    filterBtn.className = "search-filter-btn";
-    filterBtn.innerHTML = '<i class="fa-solid fa-sliders"></i>';
-    filterBtn.setAttribute("aria-label", "Search filters");
-    stickyControls.appendChild(filterBtn);
-
+    var filterBtn = document.getElementById("search-filter-btn");
     var popover = document.createElement("div");
-    popover.className = "search-filter-popover";
+    popover.className = "search-filter-popover search-page-popover";
     popover.innerHTML =
-      '<p class="sf-label">Sort Order</p><div class="search-filter-sort"><div class="search-filter-sort-option selected" data-sort="relevant">Most Relevant</div><div class="search-filter-sort-option" data-sort="least-relevant">Least Relevant</div></div><p class="sf-label" style="margin-top:2px;">Required Interests</p><p class="sf-desc">Use + to require multiple terms (AND logic)</p><input type="text" id="sf-required-terms" placeholder="e.g. anime + music + art"><div class="settings-btn-group" style="margin-top:2px;"><button class="btn-clear" id="sf-clear">Clear</button><button class="btn-apply" id="sf-apply">Apply</button></div>';
-    stickyControls.appendChild(popover);
+      '<p class="sf-label">Sort Order</p>' +
+      '<div class="search-filter-sort">' +
+      '<div class="search-filter-sort-option selected" data-sort="relevant">Most Relevant</div>' +
+      '<div class="search-filter-sort-option" data-sort="least-relevant">Least Relevant</div>' +
+      '</div>' +
+      '<div style="margin-top:10px;">' +
+      '<p class="sf-label">Country</p>' +
+      '<div id="search-country-wrap" style="margin-top:6px;"></div>' +
+      '</div>' +
+      '<div style="margin-top:2px;">' +
+      '<div id="search-filter-builder-wrap" style="margin-top:6px; display: flex; flex-direction: row; gap: 10px; align-items: center;"></div>' +
+      '</div>' +
+      '<div class="settings-btn-group" style="margin-top:2px;">' +
+      '<button class="btn-clear" id="sf-clear">Clear</button>' +
+      '<button class="btn-apply" id="sf-apply">Apply</button>' +
+      '</div>';
 
-    var topbar =
+    var topbar = document.querySelector(".topbar");
+    if (topbar) {
+      topbar.style.position = "relative";
+      topbar.appendChild(popover);
+    }
+
+    // Prevent clicks inside the popover from bubbling to the document
+    popover.addEventListener("click", function (e) {
+      e.stopPropagation();
+    });
+    popover.addEventListener("mousedown", function (e) {
+      e.stopPropagation();
+    });
+
+    var topbarOrig =
       searchSection.querySelector(".topbar-container") ||
       searchSection.querySelector(".topbar");
-    if (topbar && topbar.nextSibling) {
-      searchSection.insertBefore(stickyControls, topbar.nextSibling);
+    if (topbarOrig && topbarOrig.nextSibling) {
+      searchSection.insertBefore(stickyControls, topbarOrig.nextSibling);
     } else {
       searchSection.prepend(stickyControls);
     }
 
+    const SEARCH_FILTERS_KEY = "scratchswipe_search_filters";
+    var urlParams = new URLSearchParams(window.location.search);
+    var urlFilter = urlParams.get("filter") || "All";
+    var activeFilter = urlFilter;
     var sortDirection = "relevant",
-      requiredTerms = [];
-    var sortOptions = popover.querySelectorAll(".search-filter-sort-option");
-    var termsInput = popover.querySelector("#sf-required-terms");
+      currentTags = "",
+      tagsEnabled = true,
+      countryFilter = "All";
+
+    try {
+      var savedFilters = JSON.parse(sessionStorage.getItem(SEARCH_FILTERS_KEY) || "{}");
+      sortDirection = savedFilters.sort || "relevant";
+      currentTags = savedFilters.tags || "";
+      tagsEnabled = savedFilters.tagsEnabled !== false;
+      countryFilter = savedFilters.country || "All";
+    } catch (_) {}
+
+    const sortOptions = popover.querySelectorAll(".search-filter-sort-option");
     sortOptions.forEach(function (opt) {
+      opt.classList.toggle("selected", opt.dataset.sort === sortDirection);
       opt.addEventListener("click", function () {
-        sortOptions.forEach(function (o) {
-          o.classList.remove("selected");
-        });
+        sortOptions.forEach((o) => o.classList.remove("selected"));
         opt.classList.add("selected");
         sortDirection = opt.dataset.sort;
+        updateTriggerLabel();
       });
     });
+
+    function saveSearchFilters() {
+      sessionStorage.setItem(SEARCH_FILTERS_KEY, JSON.stringify({
+        sort: sortDirection,
+        tags: currentTags,
+        tagsEnabled: tagsEnabled,
+        country: countryFilter
+      }));
+    }
+
+    const fbWrap = popover.querySelector("#search-filter-builder-wrap");
+    const tagsToggle = window.ScratchSwipe.createToggleSwitch(tagsEnabled, (val) => {
+      tagsEnabled = val;
+      updateTriggerLabel();
+    });
+
+    const triggerBtn = document.createElement("button");
+    triggerBtn.className = "filter-trigger-btn";
+    triggerBtn.id = "filter-trigger-btn";
+    
+    function updateTriggerLabel() {
+      const parsed = window.ScratchSwipe.parseFilterTags(currentTags);
+      const count = parsed.required.length + parsed.optional.length + parsed.exclude.length;
+      triggerBtn.innerHTML = `<span>Edit Filter Tags</span>` + (count > 0 ? `<span class="count-badge">${count} Groups</span>` : `<i class="fa-solid fa-chevron-right" style="font-size:10px; opacity:0.5;"></i>`);
+      
+      const hasActive = (tagsEnabled && (count > 0 || sortDirection !== "relevant" || activeFilter !== "All")) || countryFilter !== "All";
+      if (filterBtn) filterBtn.classList.toggle("has-active-filters", hasActive);
+      
+      triggerBtn.style.opacity = tagsEnabled ? "1" : "0.5";
+      triggerBtn.style.pointerEvents = tagsEnabled ? "" : "none";
+    }
+    
+    var countrySelect = null;
+    function applyFilters() {
+      sortDirection = popover.querySelector(
+        ".search-filter-sort-option.selected",
+      ).dataset.sort;
+      if (countrySelect) countryFilter = countrySelect.getValue();
+      saveSearchFilters();
+      updateTriggerLabel();
+      togglePopover(false);
+      updateURLState(searchInput ? searchInput.value.trim() : "");
+      runSearch(searchInput ? searchInput.value.trim() : "");
+    }
+
+    triggerBtn.onclick = () => {
+      togglePopover(false);
+      window.ScratchSwipe.showFilterPopup(currentTags, (newTags) => {
+        currentTags = newTags;
+        applyFilters();
+      });
+    };
+    
+    updateTriggerLabel();
+    fbWrap.appendChild(triggerBtn);
+    fbWrap.appendChild(tagsToggle);
+
     function togglePopover(open) {
       if (open) popover.classList.add("open");
       else popover.classList.remove("open");
     }
-    filterBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      togglePopover(!popover.classList.contains("open"));
-    });
+
+    if (filterBtn) {
+      filterBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        togglePopover(!popover.classList.contains("open"));
+      });
+    }
+
     document.addEventListener("click", function (e) {
-      if (!stickyControls.contains(e.target)) togglePopover(false);
+      var isInsidePopover = e.target.closest(".search-filter-popover");
+      var isCustomSelect = e.target.closest(".custom-select") || e.target.closest(".custom-select-dropdown");
+      var isFilterBtn = e.target === filterBtn || e.target.closest("#search-filter-btn");
+      
+      if (!isInsidePopover && !isCustomSelect && !isFilterBtn) {
+        togglePopover(false);
+      }
     });
+
     popover.querySelector("#sf-clear").addEventListener("click", function () {
       sortDirection = "relevant";
       sortOptions.forEach(function (o) {
         o.classList.remove("selected");
       });
       sortOptions[0].classList.add("selected");
-      termsInput.value = "";
-      requiredTerms = [];
-      filterBtn.classList.remove("has-active-filters");
-      updateURLState(searchInput ? searchInput.value.trim() : "");
-      runSearch(searchInput ? searchInput.value.trim() : "");
-    });
-    popover.querySelector("#sf-apply").addEventListener("click", function () {
-      sortDirection = popover.querySelector(
-        ".search-filter-sort-option.selected",
-      ).dataset.sort;
-      requiredTerms = termsInput.value
-        .toLowerCase()
-        .split("+")
-        .map(function (t) {
-          return t.trim();
-        })
-        .filter(Boolean);
-      filterBtn.classList.toggle(
-        "has-active-filters",
-        requiredTerms.length > 0 || sortDirection !== "relevant",
-      );
+      currentTags = "";
+      tagsEnabled = true;
+      tagsToggle.setChecked(true);
+      countryFilter = "All";
+      if (countrySelect) countrySelect.setValue("All");
+      saveSearchFilters();
+      updateTriggerLabel();
       togglePopover(false);
       updateURLState(searchInput ? searchInput.value.trim() : "");
       runSearch(searchInput ? searchInput.value.trim() : "");
     });
 
+    popover.querySelector("#sf-apply").addEventListener("click", applyFilters);
+
     var db = await window.ScratchSwipe.loadDatabase();
-    var users = Object.values(db);
+    var users = window.ScratchSwipe.getDBValues();
+
+    (function initCountryFilter() {
+      const uniqueCountries = [
+        ...new Set(users.map((u) => u.country).filter(Boolean)),
+      ].sort();
+      const opts = [{ value: "All", label: "All Everywhere" }].concat(
+        uniqueCountries.map((c) => ({ value: c, label: c })),
+      );
+      const wrap = popover.querySelector("#search-country-wrap");
+      countrySelect = window.ScratchSwipe.createCustomSelect(opts, countryFilter, () => {
+        updateTriggerLabel();
+      });
+      wrap.appendChild(countrySelect);
+    })();
     var urlParams = new URLSearchParams(window.location.search);
     var urlQuery = urlParams.get("q") || "";
     var urlFilter = urlParams.get("filter") || "All";
-    var urlSort = urlParams.get("sort") || "relevant";
-    var urlRequired = urlParams.get("required") || "";
 
     if (searchInput && urlQuery) searchInput.value = urlQuery;
-
-    if (urlSort !== "relevant") {
-      sortDirection = urlSort;
-      sortOptions.forEach(function (o) {
-        o.classList.remove("selected");
-      });
-      var matchSort = popover.querySelector(
-        '.search-filter-sort-option[data-sort="' + urlSort + '"]',
-      );
-      if (matchSort) matchSort.classList.add("selected");
-    }
-
-    if (urlRequired) {
-      requiredTerms = urlRequired.split("+").filter(Boolean);
-      termsInput.value = requiredTerms.join(" + ");
-      filterBtn.classList.add("has-active-filters");
-    }
 
     var searchInputEl =
       document.getElementById("search-input") || searchInput;
@@ -137,7 +225,6 @@
       }, 80);
 
     var chips = Array.from(chipContainer.querySelectorAll(".chip-info"));
-    var activeFilter = urlFilter;
     chips.forEach(function (c) {
       c.classList.remove("selected");
     });
@@ -148,6 +235,7 @@
     if (targetChip) {
       targetChip.classList.add("selected");
       activeFilter = targetChip.textContent.trim();
+      updateTriggerLabel();
     }
     chips.forEach(function (chip) {
       chip.addEventListener("click", function () {
@@ -156,19 +244,26 @@
         });
         chip.classList.add("selected");
         activeFilter = chip.textContent.trim();
+        updateTriggerLabel();
         var q = searchInput ? searchInput.value.trim() : "";
         updateURLState(q, activeFilter);
         runSearch(q);
       });
     });
+    var searchTimeout = null;
     if (searchInput) {
       searchInput.addEventListener("input", function () {
         var q = searchInput.value.trim();
         updateURLState(q, activeFilter);
-        runSearch(q);
+        
+        if (searchTimeout) clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+          runSearch(q);
+        }, 300); // 300ms debounce
       });
       searchInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") {
+          if (searchTimeout) clearTimeout(searchTimeout);
           var q = searchInput.value.trim();
           updateURLState(q, activeFilter);
           runSearch(q);
@@ -180,23 +275,27 @@
       var p = new URLSearchParams();
       if (query) p.set("q", query);
       if (filter && filter !== "All") p.set("filter", filter);
-      if (sortDirection !== "relevant") p.set("sort", sortDirection);
-      if (requiredTerms.length > 0)
-        p.set("required", requiredTerms.join("+"));
       history.replaceState(
         null,
         "",
         window.location.pathname + (p.toString() ? "?" + p.toString() : ""),
       );
     }
+    const app = document.querySelector(".app");
     function openDetails(user) {
+      if (!detailsSection) detailsSection = document.querySelector(".details-section");
       if (detailsSection) {
         window.ScratchSwipe.populateDetailsPanel(detailsSection, user);
         detailsSection.classList.add("open");
+        if (app) app.classList.add("details-open");
       }
     }
     function closeDetails() {
-      if (detailsSection) detailsSection.classList.remove("open");
+      if (!detailsSection) detailsSection = document.querySelector(".details-section");
+      if (detailsSection) {
+        detailsSection.classList.remove("open");
+        if (app) app.classList.remove("details-open");
+      }
     }
     document.addEventListener("keydown", function (e) {
       if (
@@ -228,19 +327,6 @@
       );
     }
 
-    function scoreUser(user, query, filter) {
-      var q = query.toLowerCase();
-      if (!q) return 0;
-      if (requiredTerms.length > 0) {
-        var bio = (user.bio || "").toLowerCase();
-        if (!requiredTerms.every(function (t) {
-          return window.ScratchSwipe.bioHasWord(bio, t);
-        }))
-          return 0;
-      }
-      return window.ScratchSwipe.scoreUserByQuery(user, query, filter);
-    }
-
     function buildSectionHeader(label, count, sectionUsers, query) {
       var h = document.createElement("div");
       h.className = "main-header search-section-header result-animate";
@@ -259,9 +345,6 @@
             if (activeFilter && activeFilter !== "All")
               p.set("filter", activeFilter);
             if (label && label !== "All") p.set("section", label);
-            if (requiredTerms.length > 0)
-              p.set("required", requiredTerms.join("+"));
-            if (sortDirection !== "relevant") p.set("sort", sortDirection);
             window.location.href =
               "index.html" + (p.toString() ? "?" + p.toString() : "");
           },
@@ -371,66 +454,67 @@
         );
         return;
       }
+      
       var sd = sortDirection;
+      var parsedTags = (currentTags && tagsEnabled) ? window.ScratchSwipe.parseFilterTags(currentTags) : null;
+      var targetCountry = countryFilter;
+
+      function getScore(user, filter) {
+        if (targetCountry !== "All" && user.country !== targetCountry) return 0;
+        if (parsedTags && !window.ScratchSwipe.filterUserByTags(user, parsedTags)) return 0;
+        return window.ScratchSwipe.scoreUserByQuery(user, query, filter);
+      }
+
       if (activeFilter === "All") {
-        [
-          { label: "Users", filter: "Users" },
-          { label: "Interests", filter: "Interests" },
-          { label: "Places", filter: "Places" },
-          { label: "IDs", filter: "IDs" },
-        ].forEach(function (cfg) {
-          var group = users
-            .map(function (u) {
-              return { user: u, score: scoreUser(u, query, cfg.filter) };
-            })
-            .filter(function (e) {
-              return e.score > 0;
-            })
-            .sort(function (a, b) {
-              return sd === "least-relevant"
-                ? a.score - b.score
-                : b.score - a.score;
-            });
-          if (!group.length) return;
+        const sections = [
+          { label: "Users", filter: "Users", results: [] },
+          { label: "Interests", filter: "Interests", results: [] },
+          { label: "Places", filter: "Places", results: [] },
+          { label: "IDs", filter: "IDs", results: [] },
+        ];
+
+        // One pass over all users
+        for (let i = 0; i < users.length; i++) {
+          const u = users[i];
+          for (let s = 0; s < sections.length; s++) {
+            const sc = getScore(u, sections[s].filter);
+            if (sc > 0) {
+              sections[s].results.push({ user: u, score: sc });
+            }
+          }
+        }
+
+        sections.forEach(function(sec) {
+          if (!sec.results.length) return;
+          sec.results.sort((a, b) => sd === "least-relevant" ? a.score - b.score : b.score - a.score);
+          
           _allResults.push({
             type: "header",
-            label: cfg.label,
-            count: group.length,
-            users: group.map(function (g) {
-              return g.user;
-            }),
-            query: query,
+            label: sec.label,
+            count: sec.results.length,
+            users: sec.results.map(r => r.user),
+            query: query
           });
-          group.forEach(function (entry) {
-            _allResults.push({ type: "card", user: entry.user });
-          });
+          sec.results.forEach(r => _allResults.push({ type: "card", user: r.user }));
         });
       } else {
-        var group = users
-          .map(function (u) {
-            return { user: u, score: scoreUser(u, query, activeFilter) };
-          })
-          .filter(function (e) {
-            return e.score > 0;
-          })
-          .sort(function (a, b) {
-            return sd === "least-relevant"
-              ? a.score - b.score
-              : b.score - a.score;
-          });
-        if (group.length) {
+        const results = [];
+        for (let i = 0; i < users.length; i++) {
+          const u = users[i];
+          const sc = getScore(u, activeFilter);
+          if (sc > 0) results.push({ user: u, score: sc });
+        }
+        
+        if (results.length) {
+          results.sort((a, b) => sd === "least-relevant" ? a.score - b.score : b.score - a.score);
           _allResults.push({
             type: "header",
             label: activeFilter,
-            count: group.length,
-            users: group.map(function (g) {
-              return g.user;
-            }),
-            query: query,
+            count: results.length,
+            users: results.map(r => r.user),
+            query: query
           });
-          group.forEach(function (entry) {
-            _allResults.push({ type: "card", user: entry.user });
-          });
+          results.forEach(r => _allResults.push({ type: "card", user: r.user }));
         }
       }
       if (!_allResults.length) {

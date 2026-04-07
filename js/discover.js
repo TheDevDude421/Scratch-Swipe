@@ -26,14 +26,226 @@
     var searchQuery = urlParams.get("q") || "";
     var searchFilter = urlParams.get("filter") || "";
     var searchSection = urlParams.get("section") || "";
-    var searchRequired = urlParams.get("required") || "";
+
+    const SEARCH_FILTERS_KEY = "scratchswipe_search_filters";
+    var searchFilters = { sort: "relevant", tags: "" };
+    try {
+      var saved = sessionStorage.getItem(SEARCH_FILTERS_KEY);
+      if (saved) searchFilters = JSON.parse(saved);
+    } catch (_) {}
 
     if (fromSearch) {
       var topbar = app.querySelector(".topbar");
       if (topbar) {
         topbar.innerHTML =
-          '<p class="topbar-header">Discover Results</p><button class="circular-btn" id="settings-btn"><i class="fa-solid fa-gear icon"></i></button>';
+          '<p class="topbar-header">Discover Results</p>' +
+          '<div style="display: flex; gap: 7.5px;">' +
+          '<button class="circular-btn" id="search-filter-btn"><i class="fa-solid fa-sliders"></i></button>' +
+          '<button class="circular-btn" id="settings-btn"><i class="fa-solid fa-gear icon"></i></button>' +
+          '</div>';
       }
+    }
+
+    async function initDiscoverFilters() {
+      // Use fromSearch to decide which button to look for, as the topbar replacement depends on it
+      const filterBtn = document.getElementById(fromSearch ? "search-filter-btn" : "discover-filter-btn");
+      if (!filterBtn) return;
+
+      const isSearchRes = fromSearch && searchQuery;
+      const popover = document.createElement("div");
+      popover.className = "search-filter-popover discover-filter-popover";
+      
+      if (isSearchRes) {
+        // Search filter UI in Discover Results
+        popover.innerHTML =
+          '<p class="sf-label">Sort Order</p>' +
+          '<div class="search-filter-sort">' +
+          '<div class="search-filter-sort-option' + (searchFilters.sort === "relevant" ? " selected" : "") + '" data-sort="relevant">Most Relevant</div>' +
+          '<div class="search-filter-sort-option' + (searchFilters.sort === "least-relevant" ? " selected" : "") + '" data-sort="least-relevant">Least Relevant</div>' +
+          '</div>' +
+          '<div style="margin-top:10px;">' +
+          '<p class="sf-label">Country</p>' +
+          '<div id="popover-country-wrap" style="margin-top:6px;"></div>' +
+          '</div>' +
+          '<div style="margin-top:2px;">' +
+          '<div id="search-filter-builder-wrap" style="margin-top:6px; display: flex; flex-direction: row; gap: 10px; align-items: center;"></div>' +
+          '</div>' +
+          '<div class="settings-btn-group" style="margin-top:2px;">' +
+          '<button class="btn-clear" id="popover-clear">Clear</button>' +
+          '<button class="btn-apply" id="popover-apply">Apply</button>' +
+          '</div>';
+      } else {
+        // Normal Discover filter UI
+        popover.innerHTML =
+          '<div class="discover-filter-loading">Loading options\u2026</div>' +
+          '<div class="discover-filter-content" style="display:none; flex-direction:column; gap:12px;">' +
+          '<div><p class="sf-label">Country</p><div id="popover-country-wrap" style="margin-top:6px;"></div></div>' +
+          '<div style="margin-top:2px;">' +
+          '<div id="search-filter-builder-wrap" style="margin-top:6px; display: flex; flex-direction: row; gap: 10px; align-items: center;"></div>' +
+          '</div>' +
+          '<div class="settings-btn-group" style="margin-top:2px;">' +
+          '<button class="btn-clear" id="popover-clear">Clear</button>' +
+          '<button class="btn-apply" id="popover-apply">Apply</button>' +
+          '</div>' +
+          '</div>';
+      }
+      
+      const topbar = app.querySelector(".topbar");
+      if (topbar) {
+        topbar.style.position = "relative";
+        topbar.appendChild(popover);
+      }
+
+      let countrySelect = null;
+      let currentTags = isSearchRes ? searchFilters.tags : currentFilters.filterTags || "";
+      let tagsEnabled = isSearchRes ? (searchFilters.tagsEnabled !== false) : (currentFilters.filterTagsEnabled !== false);
+
+      function togglePopover(open) {
+        if (open) popover.classList.add("open");
+        else popover.classList.remove("open");
+      }
+
+      filterBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        togglePopover(!popover.classList.contains("open"));
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!popover.contains(e.target) && e.target !== filterBtn && !e.target.closest("#discover-filter-btn") && !e.target.closest("#search-filter-btn")) {
+          togglePopover(false);
+        }
+      });
+
+      const tagsToggle = window.ScratchSwipe.createToggleSwitch(tagsEnabled, (val) => {
+        tagsEnabled = val;
+        updateTriggerLabel();
+      });
+
+      const db = await window.ScratchSwipe.loadDatabase();
+      const allUsers = window.ScratchSwipe.getDBValues();
+      const uniqueCountries = [
+        ...new Set(allUsers.map((u) => u.country).filter(Boolean)),
+      ].sort();
+      const opts = [{ value: "All", label: "All Everywhere" }].concat(
+        uniqueCountries.map((c) => ({ value: c, label: c })),
+      );
+      const countryWrap = popover.querySelector("#popover-country-wrap");
+      const initialCountry = isSearchRes ? (searchFilters.country || "All") : currentFilters.country;
+      
+      countrySelect = window.ScratchSwipe.createCustomSelect(opts, initialCountry, () => {
+        updateTriggerLabel();
+      });
+      if (countryWrap) countryWrap.appendChild(countrySelect);
+
+      if (isSearchRes) {
+        // Sort options for search results
+        const opts = popover.querySelectorAll(".search-filter-sort-option");
+        opts.forEach(opt => {
+          opt.onclick = () => {
+            opts.forEach(o => o.classList.remove("selected"));
+            opt.classList.add("selected");
+            searchFilters.sort = opt.dataset.sort;
+            updateTriggerLabel();
+          };
+        });
+      }
+
+      const fbWrap = popover.querySelector("#search-filter-builder-wrap");
+      const triggerBtn = document.createElement("button");
+      triggerBtn.className = "filter-trigger-btn";
+      triggerBtn.id = "filter-trigger-btn";
+      
+      function updateTriggerLabel() {
+        const parsed = window.ScratchSwipe.parseFilterTags(currentTags);
+        const count = parsed.required.length + parsed.optional.length + parsed.exclude.length;
+        triggerBtn.innerHTML = `<span>Edit Filter Tags</span>` + (count > 0 ? `<span class="count-badge">${count} Groups</span>` : `<i class="fa-solid fa-chevron-right" style="font-size:10px; opacity:0.5;"></i>`);
+        
+      let hasActive = false;
+      if (tagsEnabled) {
+        hasActive = count > 0;
+        if (isSearchRes) {
+          hasActive = hasActive || searchFilters.sort !== "relevant" || (searchFilter && searchFilter !== "All") || (searchSection && searchSection !== "All");
+        }
+      }
+      const countryVal = countrySelect ? countrySelect.getValue() : "All";
+      hasActive = hasActive || countryVal !== "All";
+
+      filterBtn.classList.toggle("has-active-filters", hasActive);
+        triggerBtn.style.opacity = tagsEnabled ? "1" : "0.5";
+        triggerBtn.style.pointerEvents = tagsEnabled ? "" : "none";
+      }
+      
+      function applyFilters() {
+        const countryVal = countrySelect.getValue();
+        if (isSearchRes) {
+          searchFilters.tags = currentTags.trim();
+          searchFilters.tagsEnabled = tagsEnabled;
+          searchFilters.country = countryVal;
+          sessionStorage.setItem(SEARCH_FILTERS_KEY, JSON.stringify(searchFilters));
+        } else {
+          currentFilters = {
+            country: countryVal,
+            filterTags: currentTags.trim(),
+            filterTagsEnabled: tagsEnabled
+          };
+          window.ScratchSwipe.saveSettings("discover", currentFilters);
+        }
+        updateTriggerLabel();
+        togglePopover(false);
+        applyCurrentFilters();
+        currentIndex = 0;
+        sessionStorage.setItem(SESSION_KEY, "0");
+        generateShuffleState();
+        renderStack(false);
+        window.ScratchSwipe.showToast("Filters applied");
+      }
+
+      triggerBtn.onclick = () => {
+        togglePopover(false);
+        window.ScratchSwipe.showFilterPopup(currentTags, (newTags) => {
+          currentTags = newTags;
+          applyFilters();
+        });
+      };
+      
+      updateTriggerLabel();
+      fbWrap.appendChild(triggerBtn);
+      fbWrap.appendChild(tagsToggle);
+
+      popover.querySelector("#popover-clear").onclick = () => {
+        if (isSearchRes) {
+          searchFilters = { sort: "relevant", tags: "", tagsEnabled: true };
+          sessionStorage.setItem(SEARCH_FILTERS_KEY, JSON.stringify(searchFilters));
+          currentTags = "";
+          tagsEnabled = true;
+          tagsToggle.setChecked(true);
+          popover.querySelectorAll(".search-filter-sort-option").forEach(o => {
+            o.classList.toggle("selected", o.dataset.sort === "relevant");
+          });
+        } else {
+          currentFilters = { country: "All", filterTags: "", filterTagsEnabled: true };
+          window.ScratchSwipe.saveSettings("discover", currentFilters);
+          countrySelect.setValue("All");
+          currentTags = "";
+          tagsEnabled = true;
+          tagsToggle.setChecked(true);
+        }
+        updateTriggerLabel();
+        togglePopover(false);
+        applyCurrentFilters();
+        currentIndex = 0;
+        sessionStorage.setItem(SESSION_KEY, "0");
+        generateShuffleState();
+        renderStack(false);
+        window.ScratchSwipe.showToast("Filters cleared");
+      };
+
+      popover.querySelector("#popover-apply").onclick = applyFilters;
+
+      const loading = popover.querySelector(".discover-filter-loading");
+      if (loading) loading.style.display = "none";
+      const content = popover.querySelector(".discover-filter-content");
+      if (content) content.style.display = "flex";
     }
 
     if (fromSearch) {
@@ -105,140 +317,140 @@
     preloadPool.className = "preload-pool";
     document.body.appendChild(preloadPool);
     var preloadedSet = new Set();
+    var preloadedQueue = [];
+    const MAX_PRELOAD_DOM_SIZE = 40; // Keep only 40 images in DOM at once
+
     function preloadImages(fromIndex) {
       var s = window.ScratchSwipe.settings.advanced;
       if (s.lazyLoading === false) return;
       var count = s.preloadCount || 8;
       if (!users || !users.length) return;
+      
       for (var i = fromIndex; i < fromIndex + count; i++) {
         var src = users[i % users.length].profile_pic.replace(
           /_\d+x\d+/,
           "_200x200",
         );
         if (preloadedSet.has(src)) continue;
+        
         preloadedSet.add(src);
         var img = document.createElement("img");
         img.src = src;
         preloadPool.appendChild(img);
+        preloadedQueue.push({ src: src, el: img });
+
+        // Maintain DOM size
+        if (preloadedQueue.length > MAX_PRELOAD_DOM_SIZE) {
+          var oldest = preloadedQueue.shift();
+          if (oldest && oldest.el.parentNode) {
+            oldest.el.remove();
+            // We don't necessarily remove from preloadedSet because 
+            // the browser might still have it in its internal cache,
+            // but removing from DOM helps the renderer/memory.
+          }
+        }
       }
     }
+    
     var db = await window.ScratchSwipe.loadDatabase();
-    var allUsers = Object.values(db);
+    // Use cached values array to avoid re-creating Object.values on 10k entries
     var users = [];
     var currentFilters = window.ScratchSwipe.settings.discover;
-    var isSearchMode = false;
+    var isSearchMode = !!(fromSearch && searchQuery);
 
-    if (fromSearch && searchQuery) {
-      isSearchMode = true;
-      var effectiveFilter = searchSection || searchFilter || "All";
-      users = allUsers
-        .map(function (u) {
-          return {
-            user: u,
-            score: window.ScratchSwipe.scoreUserByQuery(u, searchQuery, effectiveFilter),
-          };
-        })
-        .filter(function (e) {
-          return e.score > 0;
-        })
-        .sort(function (a, b) {
-          return b.score - a.score;
-        })
-        .map(function (e) {
-          return e.user;
-        });
+    initDiscoverFilters();
 
-      if (searchRequired) {
-        var reqTerms = searchRequired
-          .split("+")
-          .map(function (t) {
-            return t.trim().toLowerCase();
+    function applyCurrentFilters() {
+      // Clear users array efficiently
+      users.length = 0;
+      
+      // Use the cached values array instead of creating a new one each time
+      const allEntries = window.ScratchSwipe.getDBValues();
+
+      if (isSearchMode) {
+        var effectiveFilter = searchSection || searchFilter || "All";
+        var parsedTags = window.ScratchSwipe.parseFilterTags(searchFilters.tags || "");
+        var tagsEnabled = searchFilters.tagsEnabled !== false;
+        var targetCountry = searchFilters.country || "All";
+        
+        var queryRegex = null;
+        if (searchQuery) {
+          queryRegex = new RegExp("\\b" + searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+        }
+        
+        users = allEntries
+          .map(function (u) {
+            return {
+              user: u,
+              score: window.ScratchSwipe.scoreUserByQuery(u, searchQuery, effectiveFilter, queryRegex),
+            };
           })
-          .filter(Boolean);
-        if (reqTerms.length > 0) {
-          users = users.filter(function (u) {
-            var bio = (u.bio || "").toLowerCase();
-            return reqTerms.every(function (tag) {
-              return window.ScratchSwipe.bioHasWord(bio, tag);
-            });
+          .filter(function (e) {
+            if (e.score <= 0) return false;
+            if (targetCountry !== "All" && e.user.country !== targetCountry) return false;
+            if (tagsEnabled && !window.ScratchSwipe.filterUserByTags(e.user, parsedTags)) return false;
+            return true;
+          })
+          .sort(function (a, b) {
+            return searchFilters.sort === "least-relevant"
+              ? a.score - b.score
+              : b.score - a.score;
+          })
+          .map(function (e) {
+            return e.user;
           });
+      } else {
+        var parsed = window.ScratchSwipe.parseFilterTags(currentFilters.filterTags || "");
+        var tagsEnabled = currentFilters.filterTagsEnabled !== false;
+        
+        // Use a simple loop for better memory efficiency with large datasets
+        for (let i = 0; i < allEntries.length; i++) {
+          const u = allEntries[i];
+          if (currentFilters.country !== "All" && u.country !== currentFilters.country) continue;
+          if (tagsEnabled && !window.ScratchSwipe.filterUserByTags(u, parsed)) continue;
+          users.push(u);
         }
       }
     }
 
-    function applyCurrentFilters() {
-      if (isSearchMode) return;
-      var parsed = window.ScratchSwipe.parseFilterTags(currentFilters.filterTags || "");
-      var excTags = currentFilters.exclude
-        .toLowerCase()
-        .split(",")
-        .map(function (t) {
-          return t.trim();
-        })
-        .filter(Boolean);
-      users = allUsers.filter(function (u) {
-        if (
-          currentFilters.country !== "All" &&
-          u.country !== currentFilters.country
-        )
-          return false;
-        if (!window.ScratchSwipe.filterUserByTags(u, parsed)) return false;
-        if (
-          excTags.length > 0 &&
-          excTags.some(function (tag) {
-            return (u.bio || "").toLowerCase().includes(tag);
-          })
-        )
-          return false;
-        return true;
-      });
+    applyCurrentFilters();
+
+    var SHUFFLE_KEY = "scratchswipe_shuffle_seed";
+    var shuffleSeed = null;
+    
+    // Seeded pseudo-random for reproducible shuffles without storing 10k usernames
+    function seededRandom(seed) {
+      var x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
     }
-
-    if (!isSearchMode) applyCurrentFilters();
-
-    document.addEventListener("scratchswipe:filters-changed", function (e) {
-      if (isSearchMode) return;
-      currentFilters = e.detail;
-      applyCurrentFilters();
-      currentIndex = 0;
-      sessionStorage.setItem(SESSION_KEY, "0");
-      generateShuffleState();
-      renderStack(false);
-    });
-
-    var SHUFFLE_KEY = "scratchswipe_shuffle";
-    var shuffled = null;
+    
+    function shuffleWithSeed(arr, seed) {
+      for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(seededRandom(seed + i) * (i + 1));
+        var tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+      }
+    }
+    
     function generateShuffleState() {
       if (!users.length) return;
-      for (var i = users.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var tmp = users[i];
-        users[i] = users[j];
-        users[j] = tmp;
-      }
-      shuffled = users.map(function (u) {
-        return u.username;
-      });
+      shuffleSeed = Date.now();
+      shuffleWithSeed(users, shuffleSeed);
       try {
-        sessionStorage.setItem(SHUFFLE_KEY, JSON.stringify(shuffled));
+        sessionStorage.setItem(SHUFFLE_KEY, String(shuffleSeed));
       } catch (_) {}
     }
+    
     try {
-      var raw = sessionStorage.getItem(SHUFFLE_KEY);
-      if (raw) shuffled = JSON.parse(raw);
+      var rawSeed = sessionStorage.getItem(SHUFFLE_KEY);
+      if (rawSeed) shuffleSeed = parseInt(rawSeed, 10);
     } catch (_) {}
-    if (!shuffled || shuffled.length !== users.length) {
+    
+    if (!shuffleSeed) {
       generateShuffleState();
     } else {
-      var byU = Object.fromEntries(
-        users.map(function (u) {
-          return [u.username, u];
-        }),
-      );
-      users.length = 0;
-      shuffled.forEach(function (n) {
-        if (byU[n]) users.push(byU[n]);
-      });
+      shuffleWithSeed(users, shuffleSeed);
     }
     var currentIndex = 0;
     try {
@@ -289,12 +501,13 @@
       return el;
     }
     function renderStack(ng2) {
-      var o = datingContent.querySelector(".card-stack-wrapper");
-      if (o) o.remove();
+      var wrapper = datingContent.querySelector(".card-stack-wrapper");
       var es = datingContent.querySelector(".search-empty-state");
       if (es) es.remove();
+      
       if (!users.length) {
         clearAmbient();
+        if (wrapper) wrapper.remove();
         if (btnContainer) btnContainer.style.display = "none";
         var emptyMsg = isSearchMode
           ? "No search results to swipe through"
@@ -313,31 +526,45 @@
         return;
       }
       if (btnContainer) btnContainer.style.display = "";
-      var w = document.createElement("div");
-      w.className = "card-stack-wrapper";
-      w.appendChild(
-        buildGhostCard(
-          users[(currentIndex + 2) % users.length],
-          "ghost-2",
-          ng2,
-        ),
-      );
-      w.appendChild(
-        buildGhostCard(
-          users[(currentIndex + 1) % users.length],
-          "ghost-1",
-          false,
-        ),
-      );
-      var tc = buildTopCard(users[currentIndex % users.length]);
-      tc.style.zIndex = "10";
-      w.appendChild(tc);
-      datingContent.insertBefore(w, btnContainer);
+      
+      const user0 = users[currentIndex % users.length];
+      const user1 = users[(currentIndex + 1) % users.length];
+      const user2 = users[(currentIndex + 2) % users.length];
+
+      if (!wrapper) {
+        wrapper = document.createElement("div");
+        wrapper.className = "card-stack-wrapper";
+        wrapper.innerHTML = `
+          <div class="ghost-card ghost-2"></div>
+          <div class="ghost-card ghost-1"></div>
+          <div class="dating-card" style="z-index: 10;"></div>
+        `;
+        datingContent.insertBefore(wrapper, btnContainer);
+      }
+
+      const g2 = wrapper.querySelector(".ghost-2");
+      const g1 = wrapper.querySelector(".ghost-1");
+      const tc = wrapper.querySelector(".dating-card");
+
+      g2.className = "ghost-card ghost-2" + (ng2 ? " fade-in" : "");
+      g2.innerHTML = buildCardContent(user2);
+      
+      g1.className = "ghost-card ghost-1";
+      g1.innerHTML = buildCardContent(user1);
+      
+      tc.dataset.username = user0.username;
+      tc.style.animation = "";
+      tc.style.transform = "";
+      tc.style.transition = "";
+      tc.innerHTML = buildCardContent(user0);
+      
+      wrapper.classList.remove("swiping");
+
       window.ScratchSwipe.populateDetailsPanel(
         detailsSection,
-        users[currentIndex % users.length],
+        user0,
       );
-      updateAmbient(users[currentIndex % users.length].profile_pic);
+      updateAmbient(user0.profile_pic);
       preloadImages(currentIndex);
     }
     function swipe(direction) {
@@ -407,11 +634,16 @@
       }, dur);
     }
     function openDetails() {
-      if (detailsSection && users.length)
+      if (detailsSection && users.length) {
         detailsSection.classList.add("open");
+        app.classList.add("details-open");
+      }
     }
     function closeDetails() {
-      if (detailsSection) detailsSection.classList.remove("open");
+      if (detailsSection) {
+        detailsSection.classList.remove("open");
+        app.classList.remove("details-open");
+      }
     }
     var likeBtn = datingContent.querySelector(".like"),
       dislikeBtn = datingContent.querySelector(".dislike");
@@ -458,13 +690,13 @@
         if (tSX === null || !dC || !users.length) return;
         var dx = e.touches[0].clientX - tSX,
           dy = e.touches[0].clientY - tSY;
-        if (!sA && (Math.abs(dx) > 8 || Math.abs(dy) > 8))
+        if (!sA && (Math.abs(dx) > 5 || Math.abs(dy) > 5))
           sA = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
         if (sA === "h") {
           dC.style.transition = "none";
           dC.style.transform = "translateX(" + dx + "px)";
           var w = datingContent.querySelector(".card-stack-wrapper");
-          if (w && Math.abs(dx) > 15) w.classList.add("swiping");
+          if (w && Math.abs(dx) > 10) w.classList.add("swiping");
           e.preventDefault();
         }
       },
@@ -477,11 +709,11 @@
         var dx = e.changedTouches[0].clientX - tSX,
           dy = e.changedTouches[0].clientY - tSY;
         var w = datingContent.querySelector(".card-stack-wrapper");
-        if (sA === "v" && Math.abs(dy) > 50) {
+        if (sA === "v" && Math.abs(dy) > 30) {
           dy < 0 ? openDetails() : closeDetails();
           if (w) w.classList.remove("swiping");
         } else if (sA === "h") {
-          if (Math.abs(dx) > 80) swipe(dx > 0 ? "right" : "left");
+          if (Math.abs(dx) > 40) swipe(dx > 0 ? "right" : "left");
           else {
             if (w) w.classList.remove("swiping");
             if (dC) {
@@ -510,7 +742,7 @@
         "touchend",
         function (e) {
           if (dtY === null) return;
-          if (e.changedTouches[0].clientY - dtY > 60) closeDetails();
+          if (e.changedTouches[0].clientY - dtY > 40) closeDetails();
           dtY = null;
         },
         { passive: true },
@@ -518,6 +750,7 @@
     }
     window.ScratchSwipe.hidePageLoading(datingContent);
     renderStack(false);
+    initDiscoverFilters();
   }
 
   // Export
