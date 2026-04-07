@@ -131,7 +131,7 @@
     .search-filter-sort { display: flex; gap: 3px; background: var(--bg1); border-radius: 8px; padding: 3px; }
     .search-filter-sort-option { flex: 1; padding: 7px 0; text-align: center; font-size: 11px; font-weight: bold; color: var(--white3); border-radius: 6px; cursor: pointer; transition: background 0.2s, color 0.2s; user-select: none; }
     .search-filter-sort-option.selected { background: var(--bg4); color: var(--white1); }
-    .search-filter-popover input[type="text"] { width: 100%; background: var(--bg1); border: 1px solid var(--bg4); color: var(--white1); padding: 9px 11px; border-radius: 8px; font-size: 13px; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
+    .search-filter-popover input[type="text"] { width: 100%; background: var(--bg1); border: 1px solid var(--bg4); color: var(--white1); padding: 9px 11px; border-radius: 8px; font-size: 16px; box-sizing: border-box; outline: none; transition: border-color 0.2s; transform: scale(1.0) !important; }
     .search-filter-popover input[type="text"]:focus { border-color: var(--primary); }
     .search-filter-popover input[type="text"]::placeholder { color: var(--white3); }
     .search-filter-popover .sf-label { color: var(--white3); font-size: 11px; font-weight: bold; margin: 0; }

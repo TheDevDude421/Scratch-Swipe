@@ -3,9 +3,9 @@
   window.ScratchSwipe = window.ScratchSwipe || {};
 
   var DEFAULT_PRESETS = [
-    { name: "Only Females", tag: "+{female|woman|girl|lady|she|her|she/her|her/she|herself|queen} -{male|man|boy|guy|he/him|him/he|himself}" },
-    { name: "Only Males", tag: "+{male|man|boy|gentleman|guy|he|him|he/him|him/he|himself} -{female|woman|girl|lady|she/her|her/she|herself}" },
-    { name: "Only Christian", tag: "+{christian|christ|jesus|follower of christ|man of god|woman of god|bible|church|believer} {faith|jesus follower|god}" },
+    { name: "Only Females", tag: "+{female|woman|girl|lady|she|her|she/her|her/she|herself|queen}" },
+    { name: "Only Males", tag: "+{male|man|boy|gentleman|guy|he|him|he/him|him/he|himself}" },
+    { name: "Only Christian", tag: "+{christian|christ|jesus|follower of christ|man of god|woman of god|bible|church|believer|faith|jesus follower|godfaith|jesus follower|god}" },
     { name: "Only Hindu", tag: "+{hindu|sanatan|sanatani|dharma|dharma follower} {vishnu|shiva|krishna|rama|ganesh|hanuman|lakshmi|saraswati|durga|kali|parvati|indra|brahma|moksha|karma|spiritual}" },
   ];
 

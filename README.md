@@ -47,7 +47,7 @@ Scratch Swipe/
 
 Vanilla HTML/CSS/JavaScript. Uses localStorage and MyMemory translation API.
 
-## Customization
+## 🔧 Customization
 
 All settings persist in browser localStorage:
 
